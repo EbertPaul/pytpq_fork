@@ -88,7 +88,7 @@ class TPQData:
 
 
 def read_data(directory, regex, seed_inds, qn_inds, 
-              qns_tag="qns", verbose=True):
+              qns_tag="qns", verbose=True, lime_offset=False):
     """ Read data for various seeds and quantities using regular expression
     
     Args:
@@ -107,8 +107,10 @@ def read_data(directory, regex, seed_inds, qn_inds,
             for fl in filenames:
                 files.append(os.path.join(dirname, fl))
     files.sort()
-
     data_for_seed = OrderedDict()
+    if len(files) == 0:
+        raise ValueError("No files with \"seed.\" found in directory!")
+
     for fl in files:
         match = re.search(regex, fl)
         if match:
@@ -138,7 +140,10 @@ def read_data(directory, regex, seed_inds, qn_inds,
              
                 # Array data set (remove first dimension for lime)
                 else:
-                    data[key] = hf[key][:][0]
-                
+                    if lime_offset:
+                        data[key] = hf[key][:][0]
+                    else:
+                        data[key] = hf[key][:]
             data_for_seed[seed][tuple(qns)] = data
+ 
     return TPQData(data_for_seed)

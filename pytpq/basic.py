@@ -7,6 +7,10 @@ Basic routines for an ensemble
 import numpy as np
 from collections import OrderedDict
 import time
+import multiprocessing
+
+import  pytpq.statistics_for_tpq as st
+
 
 def ground_state_energy(ensemble, tag="EigenvaluesV", modifier=None):
     """ Get the total ground state energy for every seed of an ensemble
@@ -60,7 +64,8 @@ def get_sum_of_function(ensemble, tpq_function, eigenvalue_function,
 
     # Compute sum for all seeds
     sums = OrderedDict()
-    for seed in ensemble.seeds:
+
+    def evaluate_single_seed(seed):
         print("seed", seed)
 
         # Accumulate all quantum number sectors
@@ -80,23 +85,44 @@ def get_sum_of_function(ensemble, tpq_function, eigenvalue_function,
                             ensemble.data(seed, qn, eigenvalue_tag))
  
                 else:
-                    fun_evaluated = tpq_function(seed, qn, \
-                                ensemble.data(seed, qn, alpha_tag),\
-                                ensemble.data(seed, qn, beta_tag)[:-1], \
-                                modifier)
+                    diag = ensemble.data(seed, qn, alpha_tag)
+                    offdiag = ensemble.data(seed, qn, beta_tag)[:-1]
 
+                    # remove overiterated tmatrix entries
+                    if np.any(np.abs(offdiag) < 1e-10):
+                        diag = diag[:(np.argmax(np.abs(offdiag) < 1e-10)+1)]
+                        offdiag = offdiag[:np.argmax(np.abs(offdiag) < 1e-10)]
+
+                    fun_evaluated = tpq_function(seed, qn, \
+                        diag, offdiag, modifier)
+            
                 if first:
                     sums[seed] = fun_evaluated * degeneracy
                     first = False
                 else:
                     sums[seed] += fun_evaluated * degeneracy
-                    
+
+    if ncores == None:
+        for seed in ensemble.seeds:
+            evaluate_single_seed(seed)
+    else:
+        with multiprocessing.Pool(ncores) as p:
+            p.map(evaluate_single_seed, ensemble.seeds)
+        
     return sums
 
 
 def exp_betas_outer_tmatrix(betas, tmatrix):
     # t0 = time.time()
     teigs, tvecs = np.linalg.eigh(tmatrix)
+
+    # tmatrix is assumed to be positive definite
+    if not np.all(teigs > -1e-12):
+        print(teigs)
+    assert(np.all(teigs > -1e-12))
+
+    # betas are assumed to be all negative
+    assert(np.all(betas < 0))
     tvecs_herm = np.transpose(tvecs.conj())
     exp_betas_outer_teigs = np.exp(np.outer(betas, teigs))
     # t1 = time.time()
@@ -124,7 +150,7 @@ def exp_betas_outer_tmatrix(betas, tmatrix):
 
 
 def moment(ensemble, temperatures, k, alpha_tag="AlphasV", beta_tag="BetasV",
-           eigenvalue_tag="EigenvaluesV", modifier=None):
+           eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None):
     """ Get moment of eigenvalues summed up (e.g. partition, energy, energy**2)
     
     Args:
@@ -150,31 +176,20 @@ def moment(ensemble, temperatures, k, alpha_tag="AlphasV", beta_tag="BetasV",
     # Compute all  (exp(-beta/2 * (T - e0*Id)) * T**k * exp(-beta/2 * (T - e0*Id)))_00
     def tpq_function(seed, qn, diag, offdiag, modifier=None):
 
+        tmatrix = np.diag(diag) + np.diag(offdiag, 1) + np.diag(offdiag, - 1)
+
         # T + (mod - e0) *Id
         if modifier != None:
-            tmatrix = np.diag(diag) + np.diag(offdiag, 1) + np.diag(offdiag, - 1)\
-                      + (modifier(qn, 0) - e0s[seed])  * np.eye(len(diag))
+            expmats = exp_betas_outer_tmatrix(-betas/2, tmatrix + (-modifier(qn, 0) - e0s[seed])  * np.eye(len(diag)))
+            tmat_power = np.linalg.matrix_power(tmatrix - modifier(qn, 0) * np.eye(len(diag)), k)
         else:
-            tmatrix = np.diag(diag) + np.diag(offdiag, 1) + np.diag(offdiag, - 1)\
-                      - e0s[seed] * np.eye(len(diag))
+            expmats = exp_betas_outer_tmatrix(-betas/2, tmatrix - e0s[seed] * np.eye(len(diag)))
+            tmat_power = np.linalg.matrix_power(tmatrix, k)
 
-        # exp(-beta/2 * (T - e0*Id))
-        # t0 = time.time()
-        expmats = exp_betas_outer_tmatrix(-betas/2, tmatrix)
-        # if qn == ('0', 'Gamma.C4.A'):
-        #     print(expmats)
-        # t1 = time.time()
-        # print("expm", t1-t0)
-
-        tmat_power = np.linalg.matrix_power(tmatrix, k)
-
-        # replace with einstein
         funs = []
         for expmat in expmats:
             funs.append(np.dot(expmat[0,:], np.dot(tmat_power, expmat[:,0])))
-            
-        # if qn == ('0', 'Gamma.C4.A'):
-        #     print(np.array(funs) * ensemble.dimension[qn])
+
         return np.array(funs) * ensemble.dimension[qn]
 
 
@@ -192,7 +207,7 @@ def moment(ensemble, temperatures, k, alpha_tag="AlphasV", beta_tag="BetasV",
 
 
 def qnsum(ensemble, temperatures, qn_to_val, alpha_tag="AlphasV", beta_tag="BetasV",
-          eigenvalue_tag="EigenvaluesV", modifier=None):
+          eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None):
     """ Get sum of observable only dependent on the quantum number 
         (e.g. magnetization, particle number)
     
@@ -219,16 +234,14 @@ def qnsum(ensemble, temperatures, qn_to_val, alpha_tag="AlphasV", beta_tag="Beta
     # Compute all  (exp(-beta* (T - e0*Id)) * qn)_00
     def tpq_function(seed, qn, diag, offdiag, modifier):
 
+        tmatrix = np.diag(diag) + np.diag(offdiag, 1) + np.diag(offdiag, - 1)
+        
         # T + (mod - e0) *Id
         if modifier != None:
-            tmatrix = np.diag(diag) + np.diag(offdiag, 1) + np.diag(offdiag, - 1)\
-                      + (modifier(qn, 0) - e0s[seed])  * np.eye(len(diag))
+            expmats = exp_betas_outer_tmatrix(-betas/2, tmatrix + (-modifier(qn, 0) - e0s[seed])  * np.eye(len(diag)))
         else:
-            tmatrix = np.diag(diag) + np.diag(offdiag, 1) + np.diag(offdiag, - 1)\
-                      - e0s[seed] * np.eye(len(diag))
+            expmats = exp_betas_outer_tmatrix(-betas/2, tmatrix - e0s[seed] * np.eye(len(diag)))
 
-        # exp(-beta * (T - e0*Id))
-        expmats = exp_betas_outer_tmatrix(-betas, tmatrix)
         
         return expmats[:,0,0] * qn_to_val(qn) * ensemble.dimension[qn] 
 
@@ -245,7 +258,7 @@ def qnsum(ensemble, temperatures, qn_to_val, alpha_tag="AlphasV", beta_tag="Beta
 
 
 def partition(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV", 
-              eigenvalue_tag="EigenvaluesV", modifier=None):
+              eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None):
     """ Get the partition function for a given set of temperatures
     
     Args:
@@ -258,11 +271,14 @@ def partition(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV",
     Returns:
         OrderedDict    : dictionary returning the sums as a funciton of the seed
     """
-    return moment(ensemble, temperatures, 0, alpha_tag, beta_tag, eigenvalue_tag, modifier)
+    Z = moment(ensemble, temperatures, 0, alpha_tag, beta_tag, eigenvalue_tag, modifier)
+    
+    return st.mean(Z), st.error(Z)
 
         
 def energy(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV", 
-           eigenvalue_tag="EigenvaluesV", modifier=None):
+           eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None,
+           precomputed_partition=None):
     """ Get the partition function for a given set of temperatures
     
     Args:
@@ -275,17 +291,22 @@ def energy(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV",
     Returns:
         OrderedDict    : dictionary returning the sums as a funciton of the seed
     """
-    Z = partition(ensemble, temperatures, alpha_tag, beta_tag, eigenvalue_tag, modifier)
+    Z = moment(ensemble, temperatures, 0, alpha_tag, beta_tag, eigenvalue_tag, modifier)
     E = moment(ensemble, temperatures, 1, alpha_tag, beta_tag, eigenvalue_tag, modifier)
+
+    Z_jackknife = st.jackknife(Z)
+    E_jackknife = st.jackknife(E)
+
     energy = OrderedDict()
     for seed in ensemble.seeds:
-        energy[seed] = E[seed] / Z[seed]
+        energy[seed] = E_jackknife[seed] / Z_jackknife[seed]
 
-    return energy
+    return st.mean(energy), st.error_jackknife(energy)
 
 
 def specific_heat(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV", 
-                  eigenvalue_tag="EigenvaluesV", modifier=None):
+                  eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None,
+                  precomputed_partition=None):
     """ Get the partition function for a given set of temperatures
     
     Args:
@@ -298,14 +319,55 @@ def specific_heat(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV"
     Returns:
         OrderedDict    : dictionary returning the sums as a funciton of the seed
     """
-    Z = partition(ensemble, temperatures, alpha_tag, beta_tag, eigenvalue_tag, modifier)
+    Z = moment(ensemble, temperatures, 0, alpha_tag, beta_tag, eigenvalue_tag, modifier)
     E = moment(ensemble, temperatures, 1, alpha_tag, beta_tag, eigenvalue_tag, modifier)
     Q = moment(ensemble, temperatures, 2, alpha_tag, beta_tag, eigenvalue_tag, modifier)
 
-    betas = 1. / temperatures
-
+    Z_jackknife = st.jackknife(Z)
+    E_jackknife = st.jackknife(E)
+    Q_jackknife = st.jackknife(Q)
+    
     specific_heat = OrderedDict()
+    betas = 1. / temperatures
     for seed in ensemble.seeds:
-        specific_heat[seed] = betas**2* ( Q[seed] / Z[seed] - (E[seed] / Z[seed])**2)
+        specific_heat[seed] = betas**2* ( Q_jackknife[seed] / Z_jackknife[seed] \
+                                          - (E_jackknife[seed] / Z_jackknife[seed])**2)
 
-    return specific_heat
+    return st.mean(specific_heat), st.error_jackknife(specific_heat)
+
+
+def thermodynamics(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV", 
+                   eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None,
+                   precomputed_partition=None):
+    """ Get the partition function for a given set of temperatures
+    
+    Args:
+        ensemble       : Ensemble class
+        temperatures   : temperatures as np.array
+        tag            : string, which tag is chosen for data
+        modifier       : function of quantum number and np.array of eigenvalues
+                         how to modify the eigenvalues
+        axis           : axis to sum over (default: None, all axes are summed)
+    Returns:
+        OrderedDict    : dictionary returning the sums as a funciton of the seed
+    """
+    Z = moment(ensemble, temperatures, 0, alpha_tag, beta_tag, eigenvalue_tag, modifier)
+    E = moment(ensemble, temperatures, 1, alpha_tag, beta_tag, eigenvalue_tag, modifier)
+    Q = moment(ensemble, temperatures, 2, alpha_tag, beta_tag, eigenvalue_tag, modifier)
+
+    Z_jackknife = st.jackknife(Z)
+    E_jackknife = st.jackknife(E)
+    Q_jackknife = st.jackknife(Q)
+
+    energy = OrderedDict()
+    for seed in ensemble.seeds:
+        energy[seed] = E_jackknife[seed] / Z_jackknife[seed]
+    
+    specific_heat = OrderedDict()
+    betas = 1. / temperatures
+    for seed in ensemble.seeds:
+        specific_heat[seed] = betas**2 * ( Q_jackknife[seed] / Z_jackknife[seed] \
+                                          - (E_jackknife[seed] / Z_jackknife[seed])**2)
+
+    return st.mean(Z), st.error(Z), st.mean(energy), st.error_jackknife(energy),\
+        st.mean(specific_heat), st.error_jackknife(specific_heat)

@@ -10,6 +10,7 @@ import numpy as np
 import re
 from collections import OrderedDict, defaultdict
 import h5py
+import multiprocessing
 
 class TPQData:
 
@@ -88,7 +89,8 @@ class TPQData:
 
 
 def read_data(directory, regex, seed_inds, qn_inds, 
-              qns_tag="qns", verbose=True, lime_offset=False):
+              qns_tag="qns", verbose=True, lime_offset=False,
+              ncores=None):
     """ Read data for various seeds and quantities using regular expression
     
     Args:
@@ -111,7 +113,7 @@ def read_data(directory, regex, seed_inds, qn_inds,
     if len(files) == 0:
         raise ValueError("No files with \"seed.\" found in directory!")
 
-    for fl in files:
+    def read_single_file(fl):
         match = re.search(regex, fl)
         if match:
             group = match.groups()
@@ -145,5 +147,12 @@ def read_data(directory, regex, seed_inds, qn_inds,
                     else:
                         data[key] = hf[key][:]
             data_for_seed[seed][tuple(qns)] = data
- 
+
+    if ncores == None:
+        for fl in files:
+            read_single_file(fl)
+    else:
+        with multiprocessing.Pool(ncores) as p:
+            p.map(read_single_file, files)
+            
     return TPQData(data_for_seed)

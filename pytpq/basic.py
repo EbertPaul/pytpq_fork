@@ -102,13 +102,9 @@ def get_sum_of_function(ensemble, tpq_function, eigenvalue_function,
                 else:
                     sums[seed] += fun_evaluated * degeneracy
 
-    if ncores == None:
-        for seed in ensemble.seeds:
-            evaluate_single_seed(seed)
-    else:
-        with multiprocessing.Pool(ncores) as p:
-            p.map(evaluate_single_seed, ensemble.seeds)
-        
+    for seed in ensemble.seeds:
+        evaluate_single_seed(seed)
+    
     return sums
 
 
@@ -150,7 +146,7 @@ def exp_betas_outer_tmatrix(betas, tmatrix):
 
 
 def moment(ensemble, temperatures, k, alpha_tag="AlphasV", beta_tag="BetasV",
-           eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None):
+           eigenvalue_tag="EigenvaluesV", modifier=None):
     """ Get moment of eigenvalues summed up (e.g. partition, energy, energy**2)
     
     Args:
@@ -207,7 +203,7 @@ def moment(ensemble, temperatures, k, alpha_tag="AlphasV", beta_tag="BetasV",
 
 
 def qnsum(ensemble, temperatures, qn_to_val, alpha_tag="AlphasV", beta_tag="BetasV",
-          eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None):
+          eigenvalue_tag="EigenvaluesV", modifier=None):
     """ Get sum of observable only dependent on the quantum number 
         (e.g. magnetization, particle number)
     
@@ -258,7 +254,7 @@ def qnsum(ensemble, temperatures, qn_to_val, alpha_tag="AlphasV", beta_tag="Beta
 
 
 def partition(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV", 
-              eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None):
+              eigenvalue_tag="EigenvaluesV", modifier=None):
     """ Get the partition function for a given set of temperatures
     
     Args:
@@ -277,8 +273,7 @@ def partition(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV",
 
         
 def energy(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV", 
-           eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None,
-           precomputed_partition=None):
+           eigenvalue_tag="EigenvaluesV", modifier=None):
     """ Get the partition function for a given set of temperatures
     
     Args:
@@ -305,8 +300,7 @@ def energy(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV",
 
 
 def specific_heat(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV", 
-                  eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None,
-                  precomputed_partition=None):
+                  eigenvalue_tag="EigenvaluesV", modifier=None):
     """ Get the partition function for a given set of temperatures
     
     Args:
@@ -337,8 +331,7 @@ def specific_heat(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV"
 
 
 def thermodynamics(ensemble, temperatures, alpha_tag="AlphasV", beta_tag="BetasV", 
-                   eigenvalue_tag="EigenvaluesV", modifier=None, ncores=None,
-                   precomputed_partition=None):
+                   eigenvalue_tag="EigenvaluesV", modifier=None):
     """ Get the partition function for a given set of temperatures
     
     Args:

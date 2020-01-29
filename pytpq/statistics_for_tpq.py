@@ -59,4 +59,9 @@ def error_jackknife(data):
          np.array: array of error of given data
     """
     npdata = data_dict_to_npdata(data)
-    return np.sqrt(npdata.shape[0]) * sp.stats.sem(npdata, axis=0)
+    return (npdata.shape[0]-1) * sp.stats.sem(npdata, axis=0)
+
+    # return np.sqrt((len(seeds)-1) * \
+    # np.mean((magnetic_suscs - magnetic_suscs_mean) * \
+    #         (magnetic_suscs - magnetic_suscs_mean), 
+    #         axis=0))

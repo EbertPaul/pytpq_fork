@@ -11,6 +11,8 @@ import re
 from collections import OrderedDict, defaultdict
 import h5py
 import multiprocessing
+import functools
+from joblib import Parallel, delayed
 
 class TPQData:
 
@@ -88,17 +90,50 @@ class TPQData:
         return self.data[seed][qn]
 
 
+def _read_single_file(fl, regex, seed_inds, qn_inds, lime_offset):
+    """ reads a single hdf5 file """
+    match = re.search(regex, fl)
+    group = match.groups()
+    qns = []
+    for qni in qn_inds:
+        qns.append(group[qni])
+
+    seed = group[seed_inds[0]]
+    for si in seed_inds:
+        assert seed == group[si]
+
+    data = dict()
+    hf = h5py.File(fl, 'r')
+    for key in hf.keys():
+
+        # Scalar dataset
+        if hf[key].shape == tuple():
+            data[key] = hf[key][()]
+
+        # Array data set (remove first dimension for lime)
+        else:
+            if lime_offset:
+                data[key] = hf[key][:][0]
+            else:
+                data[key] = hf[key][:]
+    return seed, tuple(qns), data
+
+
+
+
 def read_data(directory, regex, seed_inds, qn_inds, 
               qns_tag="qns", verbose=True, lime_offset=False,
               ncores=None):
     """ Read data for various seeds and quantities using regular expression
     
     Args:
-        directory (str)  : directory containing all data files
-        regex (str)      : regular expression to match files in the directory
-        seed_inds        : indices in the regex representing the seed index
-        qn_inds          : indices in the regex representing the quantum numbers
-        verbose (bool)   : print the matching files
+        directory (str)   : directory containing all data files
+        regex (str)       : regular expression to match files in the directory
+        seed_inds         : indices in the regex representing the seed index
+        qn_inds           : indices in the regex representing the quantum nmbers
+        verbose (bool)    : print the matching files
+        lime_offset (bool): flag whether data stems from "lime" output
+        ncores            : number of parallel cores to read
     Returns:
         TPQData:    TPQdata object of quantities for seeds and quantum numbers
     """
@@ -112,47 +147,36 @@ def read_data(directory, regex, seed_inds, qn_inds,
     data_for_seed = OrderedDict()
     if len(files) == 0:
         raise ValueError("No files with \"seed.\" found in directory!")
+    
+    matched_files = [fl for fl in files if re.search(regex, fl)]
+    
+    # Read files in serial
+    if ncores == None:
+        for fl in matched_files:
+            seed, qns, data = _read_single_file(fl, regex, seed_inds, qn_inds, 
+                                                lime_offset)
 
-    def read_single_file(fl):
-        match = re.search(regex, fl)
-        if match:
-            group = match.groups()
-            qns = []
-            for qni in qn_inds:
-                qns.append(group[qni])
-
-            seed = group[seed_inds[0]]
-            for si in seed_inds:
-                assert seed == group[si]
             if seed not in data_for_seed.keys():
                 data_for_seed[seed] = OrderedDict()
 
-            if verbose:
-                print("Matched", fl)
-                print("qns    ", qns)
-                print("seed   ", seed)
-
-            data = dict()
-            hf = h5py.File(fl, 'r')
-            for key in hf.keys():
-
-                # Scalar dataset
-                if hf[key].shape == tuple():
-                    data[key] = hf[key][()]
-             
-                # Array data set (remove first dimension for lime)
-                else:
-                    if lime_offset:
-                        data[key] = hf[key][:][0]
-                    else:
-                        data[key] = hf[key][:]
-            data_for_seed[seed][tuple(qns)] = data
-
-    if ncores == None:
-        for fl in files:
-            read_single_file(fl)
+            data_for_seed[seed][qns] = data
+   
+    # Parallelization over files
     else:
-        with multiprocessing.Pool(ncores) as p:
-            p.map(read_single_file, files)
-            
+        read_func = functools.partial(_read_single_file, regex=regex, 
+                                      seed_inds=seed_inds, qn_inds=qn_inds, 
+                                      lime_offset=lime_offset)
+
+        # with multiprocessing.Pool(ncores) as p:
+        #     results = p.map(read_func, matched_files)
+
+        results = Parallel(n_jobs=ncores, backend="threading")\
+                  (map(delayed(read_func), matched_files))
+
+        for seed, qns, data in results:
+            if seed not in data_for_seed.keys():
+                data_for_seed[seed] = OrderedDict()
+
+            data_for_seed[seed][qns] = data                    
+                
     return TPQData(data_for_seed)

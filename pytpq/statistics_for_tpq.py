@@ -14,7 +14,6 @@ def data_dict_to_npdata(data):
     return np.array([value for key,value in list(data.items())])
 
 
-
 def jackknife(data):
     """ Resample to Jackknife averages """
     npdata = data_dict_to_npdata(data)
@@ -23,8 +22,6 @@ def jackknife(data):
         data_resampled[seed] = \
             np.mean(np.delete(npdata, idx, axis=0), axis=0)
 
-    print(data)
-    print(data_resampled)
     return data_resampled
 
 
@@ -60,8 +57,3 @@ def error_jackknife(data):
     """
     npdata = data_dict_to_npdata(data)
     return (npdata.shape[0]-1) * sp.stats.sem(npdata, axis=0)
-
-    # return np.sqrt((len(seeds)-1) * \
-    # np.mean((magnetic_suscs - magnetic_suscs_mean) * \
-    #         (magnetic_suscs - magnetic_suscs_mean), 
-    #         axis=0))

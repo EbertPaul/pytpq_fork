@@ -26,7 +26,7 @@ class TPQData:
         # get quantum numbers defined for every seed
         qns_for_each_seed = dict()
         for seed, sectors in self.data.items():
-            qns_for_each_seed[seed] = [sector for sector in sectors]
+            qns_for_each_seed[seed] = [tuple(map(str, sector)) for sector in sectors]
             
         
         self.qns = qns_for_each_seed[self.seeds[0]]
@@ -42,6 +42,10 @@ class TPQData:
 
             # Check whether quantum numbers are uniquely defined
             if set(qns) != set(self.qns):
+                print(seed)
+                print(qns)
+                print(self.qns)
+
                 raise ValueError("Not all seeds have the same set"
                                  " of quantum numbers")
 
@@ -75,7 +79,7 @@ class TPQData:
         Returns:
             int :   dimension of quantum number sector
         """
-        return self.dimensions[qn]
+        return self.dimensions[tuple(map(str, qn))]
       
         
     def dataset(self, seed, qn):
@@ -87,7 +91,7 @@ class TPQData:
         Returns:
             dictionary :   data for the given seed and quantum number
         """
-        return self.data[seed][qn]
+        return self.data[seed][tuple(map(str, qn))]
 
 
 def _read_single_file(fl, regex, seed_inds, qn_inds, lime_offset):
@@ -149,7 +153,10 @@ def read_data(directory, regex, seed_inds, qn_inds,
         raise ValueError("No files with \"seed.\" found in directory!")
     
     matched_files = [fl for fl in files if re.search(regex, fl)]
-    
+    if verbose:
+        print(matched_files)
+
+
     # Read files in serial
     if ncores == None:
         for fl in matched_files:

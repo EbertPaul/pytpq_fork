@@ -128,3 +128,38 @@ def moment_average(diag, offdiag, e0, betas, shifts=None, k=0, check_posdef=True
 
     return avg
 
+
+def operator_average(diag, offdiag, operator, e0, betas, shifts=None, k=1, 
+                     check_posdef=True):
+    """ Compute an operator average of a tridiagonal matrix of the form
+
+    (A)_{ij}^{(k)}= e_0 \exp( - \beta_i/2 (T - e0 + \mu_j) A \exp( - \beta_i/2 (T - e0 + \mu_j) e_0
+
+    Args:
+         diag     :  np.array with diagonal elements, length N
+         offdiag  :  np.array with offdiagonal elements, length N-1
+         e0       : float of np.array, minimal eigenvalue offset (for each shift)
+         shifts   : np.array, shifts mu_k
+         check_posdef : check whether all weights are positive in exponentiation
+
+    Returns:
+        np.array : moment average tensor, M_{ij}^{(k)} as defined above
+    """
+    eigs, U = tmatrix_eig(diag, offdiag)
+    U_dag = np.transpose(U.conj())
+
+    operator_adj = np.dot(U_dag, np.dot(np.linalg.matrix_power(operator, k), U))
+
+    b_tensor = boltzmann_tensor(eigs, e0, betas / 2, shifts, check_posdef)
+
+    if shifts is None:
+        l_tensor = np.einsum("i, ij -> ij", U[0,:], b_tensor, optimize="optimal")
+        r_tensor = np.einsum("ij, i -> ij", b_tensor, U_dag[:,0], optimize="optimal")
+        avg = np.einsum("aj, ab, bj -> j", l_tensor, operator_adj, r_tensor, optimize="optimal")
+    else:
+        l_tensor = np.einsum("i, ijk -> ijk", U[0,:], b_tensor, optimize="optimal")
+        r_tensor = np.einsum("ijk, i -> ijk", b_tensor, U_dag[:,0], optimize="optimal")
+        avg = np.einsum("ajk, ab, bjk -> jk", l_tensor, operator_adj, r_tensor, optimize="optimal")
+
+    return avg
+

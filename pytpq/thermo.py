@@ -179,8 +179,10 @@ def operator_sum(ensemble, temperatures, operator_tag,
                                             alpha_tag=alpha_tag, beta_tag=beta_tag)
     op_sum = OrderedDict()
     for seed in ensemble.seeds:
+        print("op, seed", seed)
         summ = 0
         for qn in ensemble.qns:
+            print("op, qn", qn)
             degeneracy = ensemble.degeneracy[qn]
             dimension = ensemble.dimension[qn]
             if degeneracy != 0 and dimension > 0:
@@ -188,7 +190,7 @@ def operator_sum(ensemble, temperatures, operator_tag,
                                             beta_tag, crop)
 
                 operator = ensemble.data(seed, qn, operator_tag)
-                # print(qn)
+
                 # print(operator)
 
                 # Resize operator if tmatrix has been cropped (when beta small)
@@ -219,12 +221,13 @@ def operator_sum(ensemble, temperatures, operator_tag,
 def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,  
                      alpha_tag="AlphasV", beta_tag="BetasV", 
                      crop=True, check_posdef=True):
-    # print(seed)
+    print(seed)
 
     betas = 1. / temperatures
 
     summ = 0
     for qn in ensemble.qns:
+        print(qn)
         degeneracy = ensemble.degeneracy[qn]
         dimension = ensemble.dimension[qn]
         if degeneracy != 0 and dimension > 0:

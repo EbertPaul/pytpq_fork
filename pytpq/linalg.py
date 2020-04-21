@@ -111,7 +111,6 @@ def moment_average(diag, offdiag, e0, betas, shifts=None, k=0, check_posdef=True
     U_dag = np.transpose(U.conj())
 
     b_tensor = boltzmann_tensor(eigs, e0, betas, shifts, check_posdef)
-
     if shifts is None:
         moment_tensor = np.einsum("i,ij->ij", np.power(eigs, k), b_tensor, 
                                   optimize="optimal")
@@ -149,17 +148,24 @@ def operator_average(diag, offdiag, operator, e0, betas, shifts=None, k=1,
     U_dag = np.transpose(U.conj())
 
     operator_adj = np.dot(U_dag, np.dot(np.linalg.matrix_power(operator, k), U))
+    b_tensor = boltzmann_tensor(eigs, e0, betas / 2 , shifts, check_posdef)
 
-    b_tensor = boltzmann_tensor(eigs, e0, betas / 2, shifts, check_posdef)
-
+    # print("BTO", b_tensor[0,:,:])
+    
     if shifts is None:
         l_tensor = np.einsum("i, ij -> ij", U[0,:], b_tensor, optimize="optimal")
         r_tensor = np.einsum("ij, i -> ij", b_tensor, U_dag[:,0], optimize="optimal")
         avg = np.einsum("aj, ab, bj -> j", l_tensor, operator_adj, r_tensor, optimize="optimal")
     else:
-        l_tensor = np.einsum("i, ijk -> ijk", U[0,:], b_tensor, optimize="optimal")
-        r_tensor = np.einsum("ijk, i -> ijk", b_tensor, U_dag[:,0], optimize="optimal")
-        avg = np.einsum("ajk, ab, bjk -> jk", l_tensor, operator_adj, r_tensor, optimize="optimal")
+        b_tensor_l = np.einsum("i, ijk -> ijk", U[0,:], b_tensor,
+                                 optimize="optimal")
 
+        b_tensor_r = np.einsum("ijk, i -> ijk", b_tensor, U_dag[:,0],
+                               optimize="optimal")
+
+        avg = np.einsum("ajk, ab, bjk -> jk",
+                        b_tensor_l, operator_adj, b_tensor_r,
+                        optimize="optimal")
+     
     return avg
 

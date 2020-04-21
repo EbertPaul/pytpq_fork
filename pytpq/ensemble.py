@@ -8,7 +8,8 @@ Ensemble class
 from inspect import isfunction
 
 class Ensemble:
-    def __init__(self, tpq_data, qns, degeneracy=None, qn_degeneracy_map=None):
+    def __init__(self, tpq_data, qns, degeneracy=None,
+                 qn_degeneracy_map=None):
 
         self.tpq_data = tpq_data
         self.qns = qns
@@ -37,6 +38,7 @@ class Ensemble:
         for qn in self.qns:
             self.dimension[qn] = self.tpq_data.dimension(qn_degeneracy_map[qn])
             self.exact[qn]= False
+
     
     def data(self, seed, qn, tag):
         return self.tpq_data.dataset(seed, self.qn_degeneracy_map[qn])[tag]

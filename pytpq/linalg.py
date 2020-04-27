@@ -78,6 +78,10 @@ def boltzmann_tensor(eigs, e0, betas, shifts=None, check_posdef=True):
         eigs_e0 = np.outer(eigs - e0, betas)
         if check_posdef and not np.all(eigs_e0) > -1e-12:
             raise ValueError("eigs - e0 not always positive")
+        # print("eigs - e0", eigs - e0)
+        # print("beigs[0]", eigs[0])
+        # print("be0", e0)
+        # print("-eigs_e0", -eigs_e0)
         tensor = np.exp(-eigs_e0)
     else:
         if shifts.shape != e0.shape:
@@ -117,10 +121,33 @@ def moment_average(diag, offdiag, e0, betas, shifts=None, k=0, check_posdef=True
         tensor_U_dag0 = np.einsum("ij, i-> ij", moment_tensor, U_dag[:,0], 
                                   optimize="optimal")
         avg = np.einsum("i, ij -> j", U[0,:], tensor_U_dag0, optimize="optimal")
+        # print("avg", avg)
+
+        # print("inner avg ", np.array(avg)[:3])
+        # tmat = np.diag(diag) + np.diag(offdiag, k=1) + np.diag(offdiag, k=-1)
+        # eigs = np.linalg.eigvalsh(tmat)
+        # tmat0 = tmat - eigs[0]*np.diag(np.ones_like(diag))
+
+        # avg2 = []
+        # zzs = []
+        # for idx, beta in enumerate(betas):
+        #     expm = scipy.linalg.expm(-beta/2 * tmat0)
+        #     mm = np.dot(expm, np.dot(np.linalg.matrix_power(tmat0, k), expm))
+        #     avg2.append(mm[0,0])
+        #     zz = np.dot(expm, expm)
+        #     zzs.append(zz[0,0])
+        # avg2 = np.array(avg2)
+        # zzs = np.array(zzs)
+        # # print("avg2", avg2)
+        # avg2e = avg2 * np.exp(betas * (e0 - eigs[0]))
+        # print("avg2e", avg2e)
+        # print("eigs[0]", eigs[0], "e0", e0)
+        # assert(np.allclose(avg, avg2e))
+        
     else:
         eigs_shifted = np.add.outer(eigs, shifts)
-        moment_tensor = np.einsum("ik,ijk->ijk", np.power(eigs_shifted, k), b_tensor, 
-                                  optimize="optimal")
+        moment_tensor = np.einsum("ik,ijk->ijk", np.power(eigs_shifted, k),
+                                  b_tensor, optimize="optimal")
         tensor_U_dag0 = np.einsum("ijk, i-> ijk", moment_tensor, U_dag[:,0], 
                                   optimize="optimal")
         avg = np.einsum("i, ijk -> jk", U[0,:], tensor_U_dag0, optimize="optimal")
@@ -148,14 +175,36 @@ def operator_average(diag, offdiag, operator, e0, betas, shifts=None, k=1,
     U_dag = np.transpose(U.conj())
 
     operator_adj = np.dot(U_dag, np.dot(np.linalg.matrix_power(operator, k), U))
-    b_tensor = boltzmann_tensor(eigs, e0, betas / 2 , shifts, check_posdef)
-
-    # print("BTO", b_tensor[0,:,:])
-    
+    b_tensor = boltzmann_tensor(eigs, e0, betas / 2. , shifts, check_posdef)
+    # print("eigs", eigs[:3])
+    # print("oper", operator[:5,:5])
+    # tmat = np.diag(diag) + np.diag(offdiag, k=1) + np.diag(offdiag, k=-1)
+    # print("tmat", tmat[:5,:5])    
+    # print("diag", diag[:3])
+    # print("offd", offdiag[:3])
+        
     if shifts is None:
         l_tensor = np.einsum("i, ij -> ij", U[0,:], b_tensor, optimize="optimal")
         r_tensor = np.einsum("ij, i -> ij", b_tensor, U_dag[:,0], optimize="optimal")
         avg = np.einsum("aj, ab, bj -> j", l_tensor, operator_adj, r_tensor, optimize="optimal")
+
+        # # print("inner avg ", np.array(avg)[:3])
+        # avg2 = []
+        # zzs = []
+        # for idx, beta in enumerate(betas):
+
+        #     eigs = np.linalg.eigvalsh(tmat)
+        #     tmat0 = tmat - eigs[0]*np.diag(np.ones_like(diag))
+        #     expm = scipy.linalg.expm(-beta/2 * tmat0)
+        #     mm = np.dot(expm, np.dot(operator, expm))
+        #     avg2.append(mm[0,0])
+        #     zz = np.dot(expm, expm)
+        #     zzs.append(zz[0,0])
+        # avg2 = np.array(avg2)
+        # zzs = np.array(zzs)
+        # print("inner avg2", avg2[:3])
+        # print("inner part", zzs[:3])
+        # print("inner expt", (avg2 / zzs)[:3])
     else:
         b_tensor_l = np.einsum("i, ijk -> ijk", U[0,:], b_tensor,
                                  optimize="optimal")

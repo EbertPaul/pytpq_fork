@@ -7,6 +7,7 @@ Basic routines for an ensemble
 import numpy as np
 import scipy as sp
 import scipy.linalg
+from scipy.special import binom
 from collections import OrderedDict
 import time
 import multiprocessing
@@ -22,7 +23,8 @@ import matplotlib.pyplot as plt
 
 def qn_moment_sum(ensemble,  qn_to_val, temperatures,shifts=None, k=1, 
                   e0=None, alpha_tag="AlphasV", beta_tag="BetasV", 
-                  crop=True, check_posdef=True, ncores=None):
+                  crop=True, check_posdef=True, ncores=None,
+                  maxdepth=None):
     """ Get the sum of values derived from quantum numbers 
 
     A quantum number average for a given quantum number sector is defined by
@@ -56,7 +58,8 @@ def qn_moment_sum(ensemble,  qn_to_val, temperatures,shifts=None, k=1,
 
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
-                                            alpha_tag=alpha_tag, beta_tag=beta_tag)
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
 
     qn_sum = OrderedDict()
     for seed in ensemble.seeds:
@@ -66,7 +69,11 @@ def qn_moment_sum(ensemble,  qn_to_val, temperatures,shifts=None, k=1,
             dimension = ensemble.dimension[qn]
             if degeneracy != 0 and dimension > 0:
                 diag, offdiag = pba.tmatrix(ensemble, seed, qn, alpha_tag, 
-                                            beta_tag, crop)
+                                            beta_tag, crop, maxdepth=maxdepth)
+                print("seed", seed, "qn", qn)
+                print("k",  k)
+                print("qn_to_val", qn_to_val(qn))
+                print("qn_to_val**k", qn_to_val(qn)**k)
                 if shifts == None:
                     moment_avg = pla.moment_average(diag, offdiag, e0[seed], 
                                                     betas, None, 0, check_posdef)
@@ -74,6 +81,10 @@ def qn_moment_sum(ensemble,  qn_to_val, temperatures,shifts=None, k=1,
                     moment_avg = pla.moment_average(diag, offdiag, e0[seed],
                                                     betas, shifts[seed][qn], 
                                                     0, check_posdef)
+                print("moment_avg", moment_avg)
+                print("degerneracy", degeneracy)
+                print("dimension", dimension, binom(16, int(qn[0]))*binom(16, int(qn[1])))
+                print()
                 summ += qn_to_val(qn)**k * moment_avg * degeneracy * dimension
                 # from scipy.special import binom
                 # print(qn, qn_to_val(qn)**k, dimension, degeneracy, binom(16, int(qn[0]))*binom(16, int(qn[1])))
@@ -83,7 +94,8 @@ def qn_moment_sum(ensemble,  qn_to_val, temperatures,shifts=None, k=1,
 
 def moment_sum(ensemble, temperatures, shifts=None, k=0, e0=None,  
                alpha_tag="AlphasV", beta_tag="BetasV", 
-               crop=True, check_posdef=True, ncores=None):
+               crop=True, check_posdef=True, ncores=None,
+               maxdepth=None):
     """ Get the sum of moments of the trigdiagonal matrices. 
 
     A moment average for a given quantum number sector is defined by
@@ -115,13 +127,15 @@ def moment_sum(ensemble, temperatures, shifts=None, k=0, e0=None,
     
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
-                                            alpha_tag=alpha_tag, beta_tag=beta_tag)
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
     moment_sum = OrderedDict()
     if ncores == None:
         for seed in ensemble.seeds:
             _, summ = _moment_sum_seed(seed, ensemble, temperatures, 
                                        shifts, k, e0, alpha_tag, 
-                                       beta_tag, crop, check_posdef)
+                                       beta_tag, crop, check_posdef,
+                                       maxdepth=maxdepth)
             moment_sum[seed] = summ
 
     # Parallelization over seeds
@@ -142,7 +156,8 @@ def moment_sum(ensemble, temperatures, shifts=None, k=0, e0=None,
 def operator_sum(ensemble, temperatures, operator_tag, 
                  shifts=None, k=1, e0=None,  
                  alpha_tag="AlphasV", beta_tag="BetasV", 
-                 crop=True, check_posdef=True, ncores=None):
+                 crop=True, check_posdef=True, ncores=None,
+                 maxdepth=None):
     """ Get the sum of moments of the trigdiagonal matrices. 
 
     An operator sum average for a given quantum number sector is defined by
@@ -176,18 +191,19 @@ def operator_sum(ensemble, temperatures, operator_tag,
 
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
-                                            alpha_tag=alpha_tag, beta_tag=beta_tag)
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
     op_sum = OrderedDict()
     for seed in ensemble.seeds:
-        print("op, seed", seed)
         summ = 0
         for qn in ensemble.qns:
-            print("op, qn", qn)
+            # print("op, seed", seed)
+            # print("op, qn", qn)
             degeneracy = ensemble.degeneracy[qn]
             dimension = ensemble.dimension[qn]
             if degeneracy != 0 and dimension > 0:
                 diag, offdiag = pba.tmatrix(ensemble, seed, qn, alpha_tag, 
-                                            beta_tag, crop)
+                                            beta_tag, crop, maxdepth=maxdepth)
 
                 operator = ensemble.data(seed, qn, operator_tag)
 
@@ -206,13 +222,25 @@ def operator_sum(ensemble, temperatures, operator_tag,
                 if shifts == None:
                     avg = pla.operator_average(diag, offdiag, operator, e0[seed], 
                                                betas, None, k,check_posdef)
+                    # part = pla.moment_average(diag, offdiag, e0[seed], 
+                    #                                 betas, None, 0, check_posdef, maxdepth)
+                    # print("qn", qn)
+                    # print("avg", avg[:3])
+                    # print("part", part[:3])
+                    # print("avg/part", (avg / part)[:3])
                 else:
                     avg = pla.operator_average(diag, offdiag, operator, e0[seed],
                                                betas, shifts[seed][qn], 
                                                k, check_posdef)
-                summ += avg * degeneracy * dimension
 
+
+ 
+                    
+                summ += avg * degeneracy * dimension
+                # print()
+                # print()
         op_sum[seed] = summ
+        # print("SUMM", summ)
     return op_sum
 
 
@@ -220,19 +248,20 @@ def operator_sum(ensemble, temperatures, operator_tag,
 
 def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,  
                      alpha_tag="AlphasV", beta_tag="BetasV", 
-                     crop=True, check_posdef=True):
-    print(seed)
+                     crop=True, check_posdef=True,
+                     maxdepth=None):
+    # print(seed)
 
     betas = 1. / temperatures
 
     summ = 0
     for qn in ensemble.qns:
-        print(qn)
+        # print(qn)
         degeneracy = ensemble.degeneracy[qn]
         dimension = ensemble.dimension[qn]
         if degeneracy != 0 and dimension > 0:
             diag, offdiag = pba.tmatrix(ensemble, seed, qn, alpha_tag, 
-                                        beta_tag, crop)
+                                        beta_tag, crop, maxdepth=maxdepth)
             if shifts == None:
                 moment_avg = pla.moment_average(diag, offdiag, e0[seed], 
                                                 betas, None, k, check_posdef)
@@ -240,8 +269,10 @@ def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,
                 moment_avg = pla.moment_average(diag, offdiag, e0[seed],
                                                 betas, shifts[seed][qn], k, 
                                                 check_posdef)
-            # from scipy.special import binom
-            # print(qn, dimension, degeneracy, binom(16, int(qn[0]))*binom(16, int(qn[1])))
+            from scipy.special import binom
+            print(qn, dimension, degeneracy, binom(16, int(qn[0]))*binom(16, int(qn[1])))
+            print("avg", moment_avg * degeneracy * dimension)
+            print()
             summ += moment_avg * degeneracy * dimension
 
     return seed, summ
@@ -250,7 +281,8 @@ def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,
 
 def partition(ensemble, temperatures, shifts=None, e0=None,  
               alpha_tag="AlphasV", beta_tag="BetasV", 
-              crop=True, check_posdef=True, ncores=None):
+              crop=True, check_posdef=True, ncores=None,
+              maxdepth=None):
     """ Get the partition function for a given set of temperatures and shifts
     
     Args:
@@ -270,16 +302,18 @@ def partition(ensemble, temperatures, shifts=None, e0=None,
     """
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
-                                            alpha_tag=alpha_tag, beta_tag=beta_tag)
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
 
     Z = moment_sum(ensemble, temperatures, shifts, 0, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
     return st.mean(Z), st.error(Z)
 
         
 def energy(ensemble, temperatures, shifts=None, e0=None,  
            alpha_tag="AlphasV", beta_tag="BetasV", 
-           crop=True, check_posdef=True, ncores=None):
+           crop=True, check_posdef=True, ncores=None,
+           maxdepth=None):
     """ Get the energy for a given set of temperatures and shifts
     
     Args:
@@ -302,9 +336,9 @@ def energy(ensemble, temperatures, shifts=None, e0=None,
                                             alpha_tag=alpha_tag, beta_tag=beta_tag)
 
     Z = moment_sum(ensemble, temperatures, shifts, 0, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
     E = moment_sum(ensemble, temperatures, shifts, 1, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
 
     Z_jackknife = st.jackknife(Z)
     E_jackknife = st.jackknife(E)
@@ -318,7 +352,8 @@ def energy(ensemble, temperatures, shifts=None, e0=None,
 
 def entropy(ensemble, temperatures, shifts=None, e0=None,  
             alpha_tag="AlphasV", beta_tag="BetasV", 
-            crop=True, check_posdef=True, ncores=None):
+            crop=True, check_posdef=True, ncores=None,
+            maxdepth=None):
     """ Get the entropy for a given set of temperatures and shifts
     
     Args:
@@ -338,13 +373,14 @@ def entropy(ensemble, temperatures, shifts=None, e0=None,
     """
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
-                                            alpha_tag=alpha_tag, beta_tag=beta_tag)
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
 
 
     Z = moment_sum(ensemble, temperatures, shifts, 0, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
     E = moment_sum(ensemble, temperatures, shifts, 1, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
 
     Z_jackknife = st.jackknife(Z)
     E_jackknife = st.jackknife(E)
@@ -365,7 +401,8 @@ def entropy(ensemble, temperatures, shifts=None, e0=None,
 
 def specific_heat(ensemble, temperatures, shifts=None, e0=None,  
                   alpha_tag="AlphasV", beta_tag="BetasV", 
-                  crop=True, check_posdef=True, ncores=None):
+                  crop=True, check_posdef=True, ncores=None,
+                  maxdepth=None):
     """ Get the specific heat for a given set of temperatures and shifts
     
     Args:
@@ -387,14 +424,15 @@ def specific_heat(ensemble, temperatures, shifts=None, e0=None,
 
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
-                                            alpha_tag=alpha_tag, beta_tag=beta_tag)
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
 
     Z = moment_sum(ensemble, temperatures, shifts, 0, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
     E = moment_sum(ensemble, temperatures, shifts, 1, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
     Q = moment_sum(ensemble, temperatures, shifts, 2, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
 
     Z_jackknife = st.jackknife(Z)
     E_jackknife = st.jackknife(E)
@@ -419,7 +457,8 @@ def specific_heat(ensemble, temperatures, shifts=None, e0=None,
 
 def thermodynamics(ensemble, temperatures, shifts=None, e0=None,  
                    alpha_tag="AlphasV", beta_tag="BetasV", 
-                   crop=True, check_posdef=True, ncores=None):
+                   crop=True, check_posdef=True, ncores=None,
+                   maxdepth=None):
     """ Get the partition / energy / specific heat for a given set 
         of temperatures and shifts
     
@@ -442,14 +481,15 @@ def thermodynamics(ensemble, temperatures, shifts=None, e0=None,
 
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
-                                            alpha_tag=alpha_tag, beta_tag=beta_tag)
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
 
     Z = moment_sum(ensemble, temperatures, shifts, 0, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
     E = moment_sum(ensemble, temperatures, shifts, 1, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
     Q = moment_sum(ensemble, temperatures, shifts, 2, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
 
     Z_jackknife = st.jackknife(Z)
     E_jackknife = st.jackknife(E)
@@ -479,7 +519,8 @@ def thermodynamics(ensemble, temperatures, shifts=None, e0=None,
 
 def quantumnumber(ensemble, qn_to_val, temperatures, shifts=None, e0=None,  
                   alpha_tag="AlphasV", beta_tag="BetasV", 
-                  crop=True, check_posdef=True, ncores=None):
+                  crop=True, check_posdef=True, ncores=None,
+                  maxdepth=None):
     """ Get quantum number average for a given set of temperatures and shifts
     
     Args:
@@ -501,12 +542,15 @@ def quantumnumber(ensemble, qn_to_val, temperatures, shifts=None, e0=None,
     temperatures = np.array(temperatures)
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
-                                            alpha_tag=alpha_tag, beta_tag=beta_tag)
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
 
     Z = moment_sum(ensemble, temperatures, shifts, 0, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores,
+                   maxdepth)
     N = qn_moment_sum(ensemble,  qn_to_val, temperatures, shifts, 1, 
-                      e0, alpha_tag, beta_tag, crop, check_posdef, ncores)
+                      e0, alpha_tag, beta_tag, crop, check_posdef, ncores,
+                      maxdepth)
 
     Z_jackknife = st.jackknife(Z)
     N_jackknife = st.jackknife(N)
@@ -520,7 +564,8 @@ def quantumnumber(ensemble, qn_to_val, temperatures, shifts=None, e0=None,
 
 def susceptibility(ensemble, qn_to_val, temperatures, shifts=None, e0=None,  
                    alpha_tag="AlphasV", beta_tag="BetasV", 
-                   crop=True, check_posdef=True, ncores=None):
+                   crop=True, check_posdef=True, ncores=None,
+                   maxdepth=None):
     """ Get quantum number susceptibility for given set of tempraturs and shifts
     
     Args:
@@ -542,14 +587,15 @@ def susceptibility(ensemble, qn_to_val, temperatures, shifts=None, e0=None,
     temperatures = np.array(temperatures)
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
-                                            alpha_tag=alpha_tag, beta_tag=beta_tag)
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
 
     Z = moment_sum(ensemble, temperatures, shifts, 0, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores)
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
     N = qn_moment_sum(ensemble,  qn_to_val, temperatures, shifts, 1, 
-                      e0, alpha_tag, beta_tag, crop, check_posdef, ncores)
+                      e0, alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
     N2 = qn_moment_sum(ensemble,  qn_to_val, temperatures, shifts, 2, 
-                      e0, alpha_tag, beta_tag, crop, check_posdef, ncores)
+                      e0, alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
 
     Z_jackknife = st.jackknife(Z)
     N_jackknife = st.jackknife(N)
@@ -560,7 +606,7 @@ def susceptibility(ensemble, qn_to_val, temperatures, shifts=None, e0=None,
     for seed in ensemble.seeds:
         susceptibility[seed] = ( N2_jackknife[seed] / Z_jackknife[seed] \
                                 - (N_jackknife[seed] / Z_jackknife[seed])**2)
-
+        
         # Multiply by betas
         if shifts is None:
             susceptibility[seed] = betas * susceptibility[seed]
@@ -572,7 +618,8 @@ def susceptibility(ensemble, qn_to_val, temperatures, shifts=None, e0=None,
 
 def operator(ensemble, temperatures, operator_tag, shifts=None, e0=None,  
              alpha_tag="AlphasV", beta_tag="BetasV", 
-             crop=True, check_posdef=True, ncores=None):
+             crop=True, check_posdef=True, ncores=None,
+             maxdepth=None):
     """ Get quantum number susceptibility for given set of tempraturs and shifts
     
     Args:

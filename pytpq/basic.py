@@ -57,7 +57,7 @@ def get_shifts(ensemble, multipliers, qn_to_val):
 
 
 def ground_state_energy(ensemble, alpha_tag="AlphasV", beta_tag="BetasV", 
-                        shifts=None, ncores=None):
+                        shifts=None, ncores=None, maxdepth=None):
     """ Get the total ground state energy for all seeds of an ensemble
     
     Args:
@@ -79,7 +79,8 @@ def ground_state_energy(ensemble, alpha_tag="AlphasV", beta_tag="BetasV",
             _, e0, e0_qn = _ground_state_energy_seed(seed, ensemble, 
                                                      alpha_tag=alpha_tag, 
                                                      beta_tag=beta_tag, 
-                                                     shifts=shifts)
+                                                     shifts=shifts,
+                                                     maxdepth=maxdepth)
             e0s[seed] = e0
             e0_qns[seed] = e0_qn
 
@@ -87,7 +88,8 @@ def ground_state_energy(ensemble, alpha_tag="AlphasV", beta_tag="BetasV",
     else:
         e0_func = functools.partial(_ground_state_energy_seed,
                                     ensemble=ensemble, alpha_tag=alpha_tag,
-                                    beta_tag=beta_tag, shifts=shifts)
+                                    beta_tag=beta_tag, shifts=shifts,
+                                    maxdepth=maxdepth)
         # with multiprocessing.Pool(ncores) as p:
         #     seeds = ensemble.seeds
         #     results = p.map(e0_func, seeds)
@@ -105,7 +107,8 @@ def ground_state_energy(ensemble, alpha_tag="AlphasV", beta_tag="BetasV",
 
 
 def _ground_state_energy_seed(seed, ensemble, alpha_tag="AlphasV", 
-                              beta_tag="BetasV", shifts=None):
+                              beta_tag="BetasV", shifts=None,
+                              maxdepth=None):
     """ Get the total ground state energy for a seed of an ensemble """
     assert len(ensemble.qns) > 0
 
@@ -122,7 +125,8 @@ def _ground_state_energy_seed(seed, ensemble, alpha_tag="AlphasV",
     for qn in ensemble.qns:
         if ensemble.degeneracy[qn] > 0 and ensemble.dimension[qn] > 0:
             diag, offdiag = tmatrix(ensemble, seed, qn, alpha_tag, 
-                                    beta_tag, crop=True)
+                                    beta_tag, crop=True,
+                                    maxdepth=maxdepth)
             if shifts == None:
                 e = pla.tmatrix_e0(diag, offdiag)
                 if e < e0:

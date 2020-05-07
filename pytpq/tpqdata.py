@@ -19,7 +19,7 @@ class TPQData:
     def __init__(self, data, qns_tag="qns", dimension_tag="Dimension"):
         self.data = data
         self.seeds = list(data.keys())
-        
+
         if len(self.seeds) == 0:
             raise ValueError("No seeds to initialize TPQData")
 

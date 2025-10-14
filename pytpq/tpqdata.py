@@ -1,189 +1,110 @@
-# -*- coding: utf-8 -*-
-"""
-TPQData class
-
-:author: Alexander Wietek
-"""
-from __future__ import absolute_import, division, print_function
-import os
-import numpy as np
 import re
-from collections import OrderedDict, defaultdict
 import h5py
-import multiprocessing
-import functools
-from joblib import Parallel, delayed
 
+
+"""
+    Class to handle all the TPQ data that exists for a given qn_label inside the specified directory
+    where hdf5 file names must match regex_str (that contains n_iter and n_samples as fixed numbers).
+"""
 class TPQData:
 
-    def __init__(self, data, qns_tag="qns", dimension_tag="Dimension"):
-        self.data = data
-        self.seeds = list(data.keys())
+    """ Constructor of TPQData class """
+    def __init__(self, qn_label, directory, regex_str):
+        # retrieve the data for a given qn_label (dict mapping seeds to tuples of alpha and beta vectors)
+        self.seed_data_dict = read_data(qn_label, directory, regex_str)
+        self.qn_label = qn_label
+        self.seeds = list(self.seed_data_dict.keys())
 
         if len(self.seeds) == 0:
             raise ValueError("No seeds to initialize TPQData")
-
-        # get quantum numbers defined for every seed
-        qns_for_each_seed = dict()
-        for seed, sectors in self.data.items():
-            qns_for_each_seed[seed] = [tuple(map(str, sector)) for sector in sectors]
-            
         
-        self.qns = qns_for_each_seed[self.seeds[0]]
+        # check if dimensions of alpha, beta (<= n_iter) are the same for all initial vectors
+        prev_dim = None
+        for alpha_beta_dict in self.seed_data_dict.values():
+            alpha_dim = len(alpha_beta_dict["alpha"])
+            if prev_dim is None:
+                prev_dim = alpha_dim
+            elif prev_dim != alpha_dim:
+                raise ValueError("Different dimensions of alpha encountered: {} and {}".format(prev_dim, alpha_dim))
+        self.dim_alpha = prev_dim
 
-        # Consistency checks for quantum numbers
-        for seed, qns in qns_for_each_seed.items():
-
-            # Check whether quantum numbers are uniquely defined
-            qns2 = list(set(qns))
-            if len(qns2) != len(qns):
-                raise ValueError("Non-unique quantum numbers found for seed", 
-                                 seed)
-
-            # Check whether quantum numbers are uniquely defined
-            if set(qns) != set(self.qns):
-                print(seed)
-                print(qns)
-                print(self.qns)
-
-                raise ValueError("Not all seeds have the same set"
-                                 " of quantum numbers")
-
-        # Check whether dimension is defined for each quantum number sector
-        for seed in self.seeds:
-            for qn in self.qns:
-                if not dimension_tag in self.data[seed][qn].keys():
-                    raise ValueError("dimension not defined for seed"
-                                     " {} and qn {}".format(seed, qn))
-
-        # Get dimensions from first seed
-        self.dimensions = dict()
-        for qn in self.qns:
-            self.dimensions[qn] = int(self.data[self.seeds[0]][qn]\
-                                      [dimension_tag])
-                    
-        # Check whether dimensions of qns sectors are same across all seeds
-        for seed in self.seeds:
-            for qn in self.qns:
-                if not self.dimensions[qn] == \
-                   int(self.data[seed][qn][dimension_tag]):
-                    raise ValueError("Qn sector {} does not have same"
-                                     " dimension across all seeds".format())
-            
-      
-    def dimension(self, qn):
-        """ Return the dimension of a quantum number sector
-        
-        Args:
-            qn         :   quantum number
-        Returns:
-            int :   dimension of quantum number sector
-        """
-        return self.dimensions[tuple(map(str, qn))]
-      
-        
-    def dataset(self, seed, qn):
-        """ Return the dataset for a given seed and quantum number
-        
-        Args:
-            seed       :   random seed
-            qn         :   quantum number
-        Returns:
-            dictionary :   data for the given seed and quantum number
-        """
-        return self.data[seed][tuple(map(str, qn))]
+    """ Return alpha and beta for a given seed """        
+    def dataset(self, seed):
+        data = self.seed_data_dict[seed]
+        alpha = data[0]
+        beta = data[1]
+        return alpha, beta
+    
 
 
-def _read_single_file(fl, regex, seed_inds, qn_inds, lime_offset):
-    """ reads a single hdf5 file """
-    match = re.search(regex, fl)
-    group = match.groups()
-    qns = []
-    for qni in qn_inds:
-        qns.append(group[qni])
+"""
 
-    seed = group[seed_inds[0]]
-    for si in seed_inds:
-        assert seed == group[si]
+    ---------- Functions used for reading in TPQ data ---------- 
 
-    data = dict()
-    hf = h5py.File(fl, 'r')
-    for key in hf.keys():
+"""
 
-        # Scalar dataset
-        if hf[key].shape == tuple():
-            data[key] = hf[key][()]
 
-        # Array data set (remove first dimension for lime)
-        else:
-            if lime_offset:
-                data[key] = hf[key][:][0]
+
+"""
+    Find all HDF5 files contained in "directory" and all its subdirectories
+    and return a dictionary with keys being the qns_labels and values being a
+    vector of paths to TPQ files with these quantum numbers.
+
+    - base_path = path below which the function searches for hdf5 files.
+    - regex_str = the pattern used for matching file names of hdf5 files (n_iter and n_samples are fixed therein!)
+
+"""
+def find_all_tpq_files(directory, regex_str):
+    print("----- Scanning for HDF5 files in: {} -----".format(directory))
+    # list of all hdf5 files in all subdirectories of base_path
+    hdf5_files = list(directory.rglob("*.h5"))
+    print("Found {} hdf5 files.".format(len(hdf5_files)))
+    # dictionary mapping qns_labels to list of files
+    qns_to_path_dict = dict()
+    n_files = 0
+    for h5path in hdf5_files:
+        # try to match file name and extract quantum numbers
+        match_res = re.match(regex_str, h5path.name)
+        if match_res is not None:
+            n_files += 1
+            Sztot = int(match_res.group(1))
+            irrep = match_res.group(2)
+            if (Sztot, irrep) in qns_to_path_dict:
+                qns_to_path_dict[(Sztot, irrep)].append(h5path)
             else:
-                data[key] = hf[key][:]
-    return seed, tuple(qns), data
+                qns_to_path_dict[(Sztot, irrep)] = [h5path]
+    print("Created quantum-number-resolved dictionary of {} h5 files inside {}.".format(n_files, directory))
+    return qns_to_path_dict
 
 
+def _read_single_hdf5_file(h5path):
+    """ Read a single hdf5 file and return the data as a dictionary of seeds mapped to alpha, beta tuples """
+    data = dict()
+    with h5py.File(h5path, 'r') as hf:
+        for seed in hf.keys(): # keys of hdf5 file are assumed to be the seeds of TPQ vectors
+            alpha = hf[seed]['alpha']
+            beta = hf[seed]['beta']
+            data[int(seed)] = (alpha, beta)
+    return data
 
 
-def read_data(directory, regex, seed_inds, qn_inds, 
-              qns_tag="qns", verbose=True, lime_offset=False,
-              ncores=None):
-    """ Read data for various seeds and quantities using regular expression
-    
-    Args:
-        directory (str)   : directory containing all data files
-        regex (str)       : regular expression to match files in the directory
-        seed_inds         : indices in the regex representing the seed index
-        qn_inds           : indices in the regex representing the quantum nmbers
-        verbose (bool)    : print the matching files
-        lime_offset (bool): flag whether data stems from "lime" output
-        ncores            : number of parallel cores to read
-    Returns:
-        TPQData:    TPQdata object of quantities for seeds and quantum numbers
-    """
-    # get files matching the regular expression
-    files = []
-    for (dirname, _, filenames) in os.walk(directory):
-        if "seed." in dirname:
-            for fl in filenames:
-                files.append(os.path.join(dirname, fl))
-    files.sort()
-    data_for_seed = OrderedDict()
-    if len(files) == 0:
-        raise ValueError("No files with \"seed.\" found in directory!")
-    
-    matched_files = [fl for fl in files if re.search(regex, fl)]
-    if verbose:
-        print(matched_files)
-
-
-    # Read files in serial
-    if ncores == None:
-        for fl in matched_files:
-            seed, qns, data = _read_single_file(fl, regex, seed_inds, qn_inds, 
-                                                lime_offset)
-
-            if seed not in data_for_seed.keys():
-                data_for_seed[seed] = OrderedDict()
-
-            data_for_seed[seed][qns] = data
-   
-    # Parallelization over files
-    else:
-        read_func = functools.partial(_read_single_file, regex=regex, 
-                                      seed_inds=seed_inds, qn_inds=qn_inds, 
-                                      lime_offset=lime_offset)
-
-        # with multiprocessing.Pool(ncores) as p:
-        #     results = p.map(read_func, matched_files)
-
-        results = Parallel(n_jobs=ncores, backend="threading")\
-                  (map(delayed(read_func), matched_files))
-
-        for seed, qns, data in results:
-            if seed not in data_for_seed.keys():
-                data_for_seed[seed] = OrderedDict()
-
-            data_for_seed[seed][qns] = data                    
-                
-    return TPQData(data_for_seed)
+"""
+    Read all TPQ hdf5 data files available inside "directory" matching the regular expression of file names,
+    i.e., whose quantum numbers correspond to qn_label (n_iter, n_samples fixed through regular expression matching).
+"""
+def read_data(qn_label, directory, regex_str):
+    # get dictionary of paths to hdf5 files for all quantum numbers
+    qns_to_path_dict = find_all_tpq_files(directory, regex_str)
+    if qn_label not in qns_to_path_dict:
+        raise ValueError("No hdf5 files found for quantum numbers: {}".format(qn_label))
+    qn_paths = qns_to_path_dict[qn_label]
+    seed_data_dict = dict()
+    # read all hdf5 files with required quantum numbers in serial
+    for h5path in qn_paths:
+        data_dict = _read_single_hdf5_file(h5path)
+        for seed, (alpha, beta) in data_dict.items():
+            if seed in seed_data_dict:
+                raise ValueError("Duplicate seed {} encountered when reading hdf5 files.".format(seed))
+            seed_data_dict[seed] = (alpha, beta)
+    # return dictionary mapping seeds to (alpha, beta) tuples
+    return seed_data_dict

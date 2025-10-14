@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pytpq.tpqdata import TPQData, read_data
+from pytpq.tpqdata import TPQData, find_all_tpq_files
 from pytpq.ensemble import Ensemble
 from pytpq.basic import tmatrix, get_shifts, ground_state_energy
 from pytpq.thermo import qn_moment_sum, moment_sum, operator_sum, partition, energy, entropy, specific_heat, thermodynamics, quantumnumber, susceptibility, operator

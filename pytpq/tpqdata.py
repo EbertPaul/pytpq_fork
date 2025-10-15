@@ -75,6 +75,7 @@ class TPQData:
         # For each quantum number sector, truncate data to smallest dimension across all seeds
         for qn in self.qns:
             for seed in self.seeds:
+                print("seed ", seed, " qn ", qn, " dim ", self.data[seed][qn][self.dimension_tag])
                 self.data[seed][qn][self.alpha_tag] = self.data[seed][qn][self.alpha_tag][:self.dimensions[qn]]
                 self.data[seed][qn][self.beta_tag] = self.data[seed][qn][self.beta_tag][:self.dimensions[qn]]
                 self.data[seed][qn][self.eigval_tag] = self.data[seed][qn][self.eigval_tag][:self.dimensions[qn]]
@@ -160,7 +161,6 @@ def read_data(directory, regex, seed_inds, qn_inds,
             for fl in filenames:
                 files.append(os.path.join(dirname, fl))
     files.sort()
-    print("List of files found in all seed directories (first three):", files[:3])
     data_for_seed = OrderedDict()
     if len(files) == 0:
         raise ValueError("No files with \"seed.\" found in directory!")
@@ -168,7 +168,7 @@ def read_data(directory, regex, seed_inds, qn_inds,
     matched_files = [fl for fl in files if re.search(regex, fl)]
     if verbose:
         print(matched_files)
-    print("List of files matching regex (first three):", matched_files[:3])
+    print("Number of files matching regex:", len(matched_files))
 
 
     # Read files in serial

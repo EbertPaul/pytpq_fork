@@ -150,6 +150,7 @@ def read_data(directory, regex, seed_inds, qn_inds,
             for fl in filenames:
                 files.append(os.path.join(dirname, fl))
     files.sort()
+    print("List of files found in all seed directories:", files)
     data_for_seed = OrderedDict()
     if len(files) == 0:
         raise ValueError("No files with \"seed.\" found in directory!")

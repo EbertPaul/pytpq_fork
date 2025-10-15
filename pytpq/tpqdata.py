@@ -79,6 +79,7 @@ class TPQData:
                 self.data[seed][qn][self.beta_tag] = self.data[seed][qn][self.beta_tag][:self.dimensions[qn]]
                 self.data[seed][qn][self.eigval_tag] = self.data[seed][qn][self.eigval_tag][:self.dimensions[qn]]
                 self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
+            print("Truncated data for quantum number sector", qn, "to dimension", self.dimensions[qn])
 
                 
 

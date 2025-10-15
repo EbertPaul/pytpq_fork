@@ -18,7 +18,7 @@ from joblib import Parallel, delayed
 
 class TPQData:
 
-    def __init__(self, data, qns_tag="qns", dimension_tag="Dimension"):
+    def __init__(self, data, dimension_tag="Dimension"):
         self.data = data
         self.seeds = list(data.keys())
 
@@ -58,21 +58,19 @@ class TPQData:
                     raise ValueError("dimension not defined for seed"
                                      " {} and qn {}".format(seed, qn))
 
-        # Get dimensions from first seed
+        # For every quantum number sector, get the expected dimension (for all seeds) from first seed
         self.dimensions = dict()
         for qn in self.qns:
-            self.dimensions[qn] = int(self.data[self.seeds[0]][qn]\
-                                      [dimension_tag])
+            self.dimensions[qn] = int(self.data[self.seeds[0]][qn][dimension_tag])
                     
-        # Check whether dimensions of qns sectors are same across all seeds
+        # Check whether all seeds have the same dimension for each quantum number sector
         for seed in self.seeds:
             for qn in self.qns:
-                if not self.dimensions[qn] == \
-                   int(self.data[seed][qn][dimension_tag]):
+                dim = int(self.data[seed][qn][dimension_tag])
+                if not self.dimensions[qn] == dim:
                     raise ValueError("Qn sector {} does not have same"
-                                     " dimension across all seeds".format(qn))
-            
-      
+                                     " dimension across all seeds. Expected {}, got {}".format(qn, self.dimensions[qn], dim))
+
     def dimension(self, qn):
         """ Return the dimension of a quantum number sector
         

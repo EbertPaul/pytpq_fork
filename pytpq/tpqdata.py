@@ -29,10 +29,11 @@ class TPQData:
         if len(self.seeds) == 0:
             raise ValueError("No seeds to initialize TPQData")
 
-        # get quantum numbers defined for every seed
+        # find quantum numbers for each seed
         qns_for_each_seed = dict()
         for seed, sectors in self.data.items():
             qns_for_each_seed[seed] = [tuple(map(str, sector)) for sector in sectors]
+        print("Quantum numbers for each seed:", qns_for_each_seed)
             
         
         self.qns = qns_for_each_seed[self.seeds[0]]

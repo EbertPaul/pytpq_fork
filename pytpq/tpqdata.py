@@ -84,7 +84,7 @@ class TPQData:
 
                 
 
-    def dimension(self, qn):
+    def dimension(self, qns):
         """ Return the dimension of a quantum number sector
         
         Args:
@@ -92,10 +92,10 @@ class TPQData:
         Returns:
             int :   dimension of quantum number sector
         """
-        return self.dimensions[qn]
+        return self.dimensions[tuple(map(str, qns))]
       
         
-    def dataset(self, seed, qn):
+    def dataset(self, seed, qns):
         """ Return the dataset for a given seed and quantum number
         
         Args:
@@ -104,7 +104,7 @@ class TPQData:
         Returns:
             dictionary :   data for the given seed and quantum number
         """
-        return self.data[seed][tuple(map(str, qn))]
+        return self.data[seed][tuple(map(str, qns))]
 
 
 def _read_single_file(fl, regex, seed_inds, qn_inds):

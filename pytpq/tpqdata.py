@@ -150,7 +150,7 @@ def read_data(directory, regex, seed_inds, qn_inds,
             for fl in filenames:
                 files.append(os.path.join(dirname, fl))
     files.sort()
-    print("List of files found in all seed directories:", files)
+    print("List of files found in all seed directories (first three):", files[:3])
     data_for_seed = OrderedDict()
     if len(files) == 0:
         raise ValueError("No files with \"seed.\" found in directory!")
@@ -158,6 +158,7 @@ def read_data(directory, regex, seed_inds, qn_inds,
     matched_files = [fl for fl in files if re.search(regex, fl)]
     if verbose:
         print(matched_files)
+    print("List of files matching regex:", matched_files)
 
 
     # Read files in serial

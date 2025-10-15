@@ -18,9 +18,13 @@ from joblib import Parallel, delayed
 
 class TPQData:
 
-    def __init__(self, data, dimension_tag="Dimension"):
+    def __init__(self, data, alpha_tag="Alphas", beta_tag="Betas", dimension_tag="Dimension", eigval_tag="Eigenvalues"):
         self.data = data
         self.seeds = list(data.keys())
+        self.alpha_tag = alpha_tag
+        self.beta_tag = beta_tag
+        self.dimension_tag = dimension_tag
+        self.eigval_tag = eigval_tag
 
         if len(self.seeds) == 0:
             raise ValueError("No seeds to initialize TPQData")
@@ -36,13 +40,13 @@ class TPQData:
         # Consistency checks for quantum numbers
         for seed, qns in qns_for_each_seed.items():
 
-            # Check whether quantum numbers are uniquely defined
+            # Check whether quantum numbers are unique for each seed
             qns2 = list(set(qns))
             if len(qns2) != len(qns):
                 raise ValueError("Non-unique quantum numbers found for seed", 
                                  seed)
 
-            # Check whether quantum numbers are uniquely defined
+            # Check whether quantum numbers are unique across all seeds
             if set(qns) != set(self.qns):
                 print(seed)
                 print(qns)
@@ -51,25 +55,32 @@ class TPQData:
                 raise ValueError("Not all seeds have the same set"
                                  " of quantum numbers")
 
-        # Check whether dimension is defined for each quantum number sector
+        # Check if dimension is defined for all hdf5 files
         for seed in self.seeds:
             for qn in self.qns:
-                if not dimension_tag in self.data[seed][qn].keys():
+                if not self.dimension_tag in self.data[seed][qn].keys():
                     raise ValueError("dimension not defined for seed"
                                      " {} and qn {}".format(seed, qn))
 
-        # For every quantum number sector, get the expected dimension (for all seeds) from first seed
+        # Find smallest dimension of alphas for each quantum number sector
         self.dimensions = dict()
         for qn in self.qns:
-            self.dimensions[qn] = int(self.data[self.seeds[0]][qn][dimension_tag])
-                    
-        # Check whether all seeds have the same dimension for each quantum number sector
-        for seed in self.seeds:
-            for qn in self.qns:
-                dim = int(self.data[seed][qn][dimension_tag])
-                if not self.dimensions[qn] == dim:
-                    raise ValueError("Qn sector {} does not have same"
-                                     " dimension across all seeds. Expected {}, got {}".format(qn, self.dimensions[qn], dim))
+            min_dim = np.inf
+            for seed in self.seeds:
+                new_dim = int(self.data[seed][qn][self.dimension_tag])
+                if new_dim < min_dim:
+                    min_dim = new_dim
+            self.dimensions[qn] = min_dim
+       
+        # For each quantum number sector, truncate data to smallest dimension across all seeds
+        for qn in self.qns:
+            for seed in self.seeds:
+                self.data[seed][qn][self.alpha_tag] = self.data[seed][qn][self.alpha_tag][:self.dimensions[qn]]
+                self.data[seed][qn][self.beta_tag] = self.data[seed][qn][self.beta_tag][:self.dimensions[qn]]
+                self.data[seed][qn][self.eigval_tag] = self.data[seed][qn][self.eigval_tag][:self.dimensions[qn]]
+                self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
+
+                
 
     def dimension(self, qn):
         """ Return the dimension of a quantum number sector

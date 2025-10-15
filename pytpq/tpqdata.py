@@ -70,7 +70,7 @@ class TPQData:
                 if not self.dimensions[qn] == \
                    int(self.data[seed][qn][dimension_tag]):
                     raise ValueError("Qn sector {} does not have same"
-                                     " dimension across all seeds".format())
+                                     " dimension across all seeds".format(qn))
             
       
     def dimension(self, qn):
@@ -158,7 +158,7 @@ def read_data(directory, regex, seed_inds, qn_inds,
     matched_files = [fl for fl in files if re.search(regex, fl)]
     if verbose:
         print(matched_files)
-    print("List of files matching regex:", matched_files)
+    print("List of files matching regex (first three):", matched_files[:3])
 
 
     # Read files in serial

@@ -111,7 +111,7 @@ class TPQData:
         return self.data[seed][tuple(map(str, qn))]
 
 
-def _read_single_file(fl, regex, seed_inds, qn_inds, lime_offset):
+def _read_single_file(fl, regex, seed_inds, qn_inds):
     """ reads a single hdf5 file """
     match = re.search(regex, fl)
     group = match.groups()
@@ -126,25 +126,18 @@ def _read_single_file(fl, regex, seed_inds, qn_inds, lime_offset):
     data = dict()
     hf = h5py.File(fl, 'r')
     for key in hf.keys():
-
         # Scalar dataset
         if hf[key].shape == tuple():
             data[key] = hf[key][()]
-
-        # Array data set (remove first dimension for lime)
+        # vector dataset
         else:
-            if lime_offset:
-                data[key] = hf[key][:][0]
-            else:
-                data[key] = hf[key][:]
+            data[key] = hf[key][:]
     return seed, tuple(qns), data
 
 
 
 
-def read_data(directory, regex, seed_inds, qn_inds, 
-              qns_tag="qns", verbose=True, lime_offset=False,
-              ncores=None):
+def read_data(directory, regex, seed_inds, qn_inds, verbose=True, ncores=None):
     """ Read data for various seeds and quantities using regular expression
     
     Args:
@@ -153,7 +146,6 @@ def read_data(directory, regex, seed_inds, qn_inds,
         seed_inds         : indices in the regex representing the seed index
         qn_inds           : indices in the regex representing the quantum nmbers
         verbose (bool)    : print the matching files
-        lime_offset (bool): flag whether data stems from "lime" output
         ncores            : number of parallel cores to read
     Returns:
         TPQData:    TPQdata object of quantities for seeds and quantum numbers
@@ -178,8 +170,7 @@ def read_data(directory, regex, seed_inds, qn_inds,
     # Read files in serial
     if ncores == None:
         for fl in matched_files:
-            seed, qns, data = _read_single_file(fl, regex, seed_inds, qn_inds, 
-                                                lime_offset)
+            seed, qns, data = _read_single_file(fl, regex, seed_inds, qn_inds)
 
             if seed not in data_for_seed.keys():
                 data_for_seed[seed] = OrderedDict()
@@ -189,8 +180,7 @@ def read_data(directory, regex, seed_inds, qn_inds,
     # Parallelization over files
     else:
         read_func = functools.partial(_read_single_file, regex=regex, 
-                                      seed_inds=seed_inds, qn_inds=qn_inds, 
-                                      lime_offset=lime_offset)
+                                      seed_inds=seed_inds, qn_inds=qn_inds)
 
         # with multiprocessing.Pool(ncores) as p:
         #     results = p.map(read_func, matched_files)

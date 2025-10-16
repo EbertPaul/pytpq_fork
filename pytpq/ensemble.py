@@ -5,8 +5,6 @@ Ensemble class
 :author: Alexander Wietek
 """
 
-from inspect import isfunction
-
 class Ensemble:
     def __init__(self, tpq_data, qns, degeneracy=None,
                  qn_degeneracy_map=None):
@@ -24,14 +22,17 @@ class Ensemble:
                 raise ValueError("Need a python dict as degeneracy")
             self.degeneracy = degeneracy
         else:
+            print("No degeneracies were passed to ensemble, assuming 1 for all quantum numbers.")
             for qn in self.qns:
                 self.degeneracy[qn] = 1
+            
 
         if qn_degeneracy_map != None:
             if type(qn_degeneracy_map) != dict:
                 raise ValueError("Need a python dict as qn_degeneracy_map")
             self.qn_degeneracy_map = qn_degeneracy_map
         else:
+            print("No degeneracy map was passed to ensemble, assuming qn -> qn for all quantum numbers.")
             for qn in self.qns:
                 self.qn_degeneracy_map[qn] = qn
 

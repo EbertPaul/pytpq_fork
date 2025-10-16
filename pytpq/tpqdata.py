@@ -88,7 +88,7 @@ class TPQData:
         """ Return the dimension of a quantum number sector
         
         Args:
-            qn         :   quantum number
+            qns         :   quantum number tuple
         Returns:
             int :   dimension of quantum number sector
         """
@@ -100,7 +100,7 @@ class TPQData:
         
         Args:
             seed       :   random seed
-            qn         :   quantum number
+            qns        :   quantum number tuple
         Returns:
             dictionary :   data for the given seed and quantum number
         """

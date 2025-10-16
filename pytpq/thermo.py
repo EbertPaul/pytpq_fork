@@ -81,10 +81,10 @@ def qn_moment_sum(ensemble,  qn_to_val, temperatures,shifts=None, k=1,
                     moment_avg = pla.moment_average(diag, offdiag, e0[seed],
                                                     betas, shifts[seed][qn], 
                                                     0, check_posdef)
-                print("moment_avg", moment_avg)
-                print("degerneracy", degeneracy)
-                print("dimension", dimension, binom(16, int(qn[0]))*binom(16, int(qn[1])))
-                print()
+                #print("moment_avg", moment_avg)
+                #print("degerneracy", degeneracy)
+                #print("dimension", dimension, binom(16, int(qn[0]))*binom(16, int(qn[1])))
+                #print()
                 summ += qn_to_val(qn)**k * moment_avg * degeneracy * dimension
                 # from scipy.special import binom
                 # print(qn, qn_to_val(qn)**k, dimension, degeneracy, binom(16, int(qn[0]))*binom(16, int(qn[1])))
@@ -269,10 +269,11 @@ def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,
                 moment_avg = pla.moment_average(diag, offdiag, e0[seed],
                                                 betas, shifts[seed][qn], k, 
                                                 check_posdef)
-            from scipy.special import binom
-            print(qn, dimension, degeneracy, binom(16, int(qn[0]))*binom(16, int(qn[1])))
-            print("avg", moment_avg * degeneracy * dimension)
-            print()
+            # I have no clue why the lines below are here, so I uncommented them
+            #from scipy.special import binom
+            #print(qn, dimension, degeneracy, binom(16, int(qn[0]))*binom(16, int(qn[1])))
+            #print("avg", moment_avg * degeneracy * dimension)
+            #print()
             summ += moment_avg * degeneracy * dimension
 
     return seed, summ

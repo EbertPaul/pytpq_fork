@@ -60,15 +60,20 @@ class TPQData:
                     raise ValueError("dimension not defined for seed"
                                      " {} and qn {}".format(seed, qn))
 
-        # Find smallest dimension of alphas for each quantum number sector
+        # Find smallest and largest dimension of alphas for each quantum number sector
         self.dimensions = dict()
+        max_dims = dict()
         for qn in self.qns:
             min_dim = np.inf
+            max_dim = 0
             for seed in self.seeds:
                 new_dim = int(self.data[seed][qn][self.dimension_tag])
                 if new_dim < min_dim:
                     min_dim = new_dim
+                if new_dim > max_dim:
+                    max_dim = new_dim
             self.dimensions[qn] = min_dim
+            max_dims[qn] = max_dim
        
         # For each quantum number sector, truncate data to smallest dimension across all seeds
         for qn in self.qns:
@@ -78,6 +83,7 @@ class TPQData:
                 self.data[seed][qn][self.eigval_tag] = self.data[seed][qn][self.eigval_tag][:self.dimensions[qn]]
                 self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
             print("Truncated data for quantum number sector", qn, "to dimension", self.dimensions[qn])
+            print("Largest dimension encountered: ", max_dims[qn])
 
                 
 

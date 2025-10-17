@@ -9,6 +9,7 @@ import pytpq.thermo as pth
 
 import time
 
+"""
 
 def eigs_poles_weights_infty(diag_left, offdiag_left, 
                              diag_right, offdiag_right, 
@@ -166,3 +167,4 @@ def broaden(omegas, poles, weights, eta):
     # print("sum", t1-t0, "secs")
 
     return summ
+"""

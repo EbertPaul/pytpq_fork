@@ -15,8 +15,8 @@ import pytpq.statistics_for_tpq as st
 import pytpq.linalg as pla
 import pytpq.basic as pba
 
-def moment_sum(ensemble, temperatures, shifts=None, k=0, e0=None,  
-               alpha_tag="AlphasV", beta_tag="BetasV", 
+def moment_sum(ensemble, temperatures, k=0, e0=None,  
+               alpha_tag="Alphas", beta_tag="Betas", 
                crop=True, check_posdef=True, ncores=None,
                maxdepth=None):
     """ Get the sum of moments of the trigdiagonal matrices. 
@@ -25,15 +25,13 @@ def moment_sum(ensemble, temperatures, shifts=None, k=0, e0=None,
 
     M_{ij}^{(k)}= e_0 T^k \exp( - \beta_i (T - e0 + \mu_j) e_0 * deg * dim
     
-    where \beta denotes inverse temperatures, \mu energy shifts for 
-    a quantum number sector, and T the tridiagonal matrix, deg the
+    where \beta denotes inverse temperatures, and T the tridiagonal matrix, deg the
     degeneracy of the quantum number, and dim the dimension of the
     quantum number sector
 
     Args:
         ensemble       : Ensemble class
         temperatures   : temperatures as np.array
-        shifts         : optional, dictionary of shifts for every seed and qn
         k              : moment of eigenvalues
         e0             : precomputed ground state energy, optional
         alpha_tag : string, which tag is chosen for diagonal data
@@ -49,14 +47,13 @@ def moment_sum(ensemble, temperatures, shifts=None, k=0, e0=None,
         raise ValueError("Invalid temperatures")
     
     if e0 == None:
-        e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
+        e0, e0qns = pba.ground_state_energy(ensemble, ncores=ncores, 
                                             alpha_tag=alpha_tag, beta_tag=beta_tag,
                                             maxdepth=maxdepth)
     moment_sum = OrderedDict()
     if ncores == None:
         for seed in ensemble.seeds:
-            _, summ = _moment_sum_seed(seed, ensemble, temperatures, 
-                                       shifts, k, e0, alpha_tag, 
+            _, summ = _moment_sum_seed(seed, ensemble, temperatures, k, e0, alpha_tag, 
                                        beta_tag, crop, check_posdef,
                                        maxdepth=maxdepth)
             moment_sum[seed] = summ
@@ -64,7 +61,7 @@ def moment_sum(ensemble, temperatures, shifts=None, k=0, e0=None,
     # Parallelization over seeds
     else:
         sum_func = functools.partial(_moment_sum_seed, ensemble=ensemble, 
-                                     temperatures=temperatures, shifts=shifts, 
+                                     temperatures=temperatures, 
                                      k=k, e0=e0, alpha_tag=alpha_tag,
                                      beta_tag=beta_tag, crop=crop, 
                                      check_posdef=check_posdef)
@@ -77,8 +74,8 @@ def moment_sum(ensemble, temperatures, shifts=None, k=0, e0=None,
     return moment_sum
 
 
-def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,  
-                     alpha_tag="AlphasV", beta_tag="BetasV", 
+def _moment_sum_seed(seed, ensemble, temperatures, k=0, e0=None,  
+                     alpha_tag="Alphas", beta_tag="Betas", 
                      crop=True, check_posdef=True,
                      maxdepth=None):
     # print(seed)
@@ -90,36 +87,22 @@ def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,
         degeneracy = ensemble.degeneracy[qn]
         dimension = ensemble.dimension[qn]
         if degeneracy != 0 and dimension > 0:
-            diag, offdiag = pba.tmatrix(ensemble, seed, qn, alpha_tag, 
-                                        beta_tag, crop, maxdepth=maxdepth)
-            if shifts == None:
-                moment_avg = pla.moment_average(diag, offdiag, e0[seed], 
-                                                betas, None, k, check_posdef)
-            else:
-                moment_avg = pla.moment_average(diag, offdiag, e0[seed],
-                                                betas, shifts[seed][qn], k, 
-                                                check_posdef)
-            # I have no clue why the lines below are here, so I uncommented them
-            #from scipy.special import binom
-            #print(qn, dimension, degeneracy, binom(16, int(qn[0]))*binom(16, int(qn[1])))
-            #print("avg", moment_avg * degeneracy * dimension)
-            #print()
-            summ += moment_avg * degeneracy #* dimension
+            diag, offdiag = pba.tmatrix(ensemble, seed, qn, alpha_tag, beta_tag, crop, maxdepth=maxdepth)
+            moment_avg = pla.moment_average(diag, offdiag, e0[seed],  betas, k, check_posdef)
+            summ += moment_avg * degeneracy * dimension
 
     return seed, summ
 
 
-def thermodynamics(ensemble, temperatures, shifts=None, e0=None,  
-                   alpha_tag="AlphasV", beta_tag="BetasV", 
+def thermodynamics(ensemble, temperatures, e0=None,  
+                   alpha_tag="Alphas", beta_tag="Betas", 
                    crop=True, check_posdef=True, ncores=None,
                    maxdepth=None):
-    """ Get the partition / energy / specific heat for a given set 
-        of temperatures and shifts
+    """ Get the partition / energy / specific heat 
     
     Args:
         ensemble       : Ensemble class
         temperatures   : temperatures as np.array
-        shifts         : optional, dictionary of shifts for every seed and qn
         k              : moment of eigenvalues
         e0             : precomputed ground state energy, optional
         alpha_tag      : string, which tag is chosen for diagonal data
@@ -129,7 +112,7 @@ def thermodynamics(ensemble, temperatures, shifts=None, e0=None,
         ncores         : number of parallel processes used for the computation
     Returns:
         np.array, np.array: mean / error estimate for specific heat for 
-                            every temperature and shift
+                            every temperature
     """
     temperatures = np.array(temperatures)
 
@@ -138,15 +121,15 @@ def thermodynamics(ensemble, temperatures, shifts=None, e0=None,
         print("Quantum number:", qn, "has degeneracy", degeneracy)
 
     if e0 == None:
-        e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 
+        e0, e0qns = pba.ground_state_energy(ensemble, ncores=ncores, 
                                             alpha_tag=alpha_tag, beta_tag=beta_tag,
                                             maxdepth=maxdepth)
 
-    Z = moment_sum(ensemble, temperatures, shifts, 0, e0,  
+    Z = moment_sum(ensemble, temperatures, 0, e0,  
                    alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
-    E = moment_sum(ensemble, temperatures, shifts, 1, e0,  
+    E = moment_sum(ensemble, temperatures, 1, e0,  
                    alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
-    Q = moment_sum(ensemble, temperatures, shifts, 2, e0,  
+    Q = moment_sum(ensemble, temperatures, 2, e0,  
                    alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
 
     Z_jackknife = st.jackknife(Z)
@@ -160,15 +143,8 @@ def thermodynamics(ensemble, temperatures, shifts=None, e0=None,
     specific_heat = OrderedDict()
     betas = 1. / temperatures
     for seed in ensemble.seeds:
-        specific_heat[seed] = ( Q_jackknife[seed] / Z_jackknife[seed] \
-                                - (E_jackknife[seed] / Z_jackknife[seed])**2)
-
-        # Multiply by betas
-        if shifts is None:
-            specific_heat[seed] = betas**2 * specific_heat[seed]
-        else:
-            specific_heat[seed] = np.einsum("i, ij->ij", 
-                                            betas**2, specific_heat[seed])
+        specific_heat[seed] = ( Q_jackknife[seed] / Z_jackknife[seed] - (E_jackknife[seed] / Z_jackknife[seed])**2)
+        specific_heat[seed] = betas**2 * specific_heat[seed]
 
     return st.mean(Z), st.error(Z), \
         st.mean(energy), st.error_jackknife(energy), \

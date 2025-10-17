@@ -60,6 +60,10 @@ class TPQData:
                     raise ValueError("dimension not defined for seed"
                                      " {} and qn {}".format(seed, qn))
 
+
+        """
+        # USE THIS FOR PADDING SHORTER ALPHAS TO LARGEST DIMENSION
+
         # in each quantum number sector, find largest dimension (i.e., "longest" alpha vector)
         self.dimensions = dict()
         for qn in self.qns:
@@ -92,8 +96,11 @@ class TPQData:
                     self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
             print("Padded qn sector", qn, "to dim=", self.dimensions[qn])
             print("Max padding applied:", max_pad)
+        """
 
-        """ 
+        
+        # USE THIS FOR TRUNCATING LONGER ALPHAS TO SMALLEST DIMENSION
+
         # Find smallest and largest dimension of alphas for each quantum number sector
         self.dimensions = dict()
         max_dims = dict()
@@ -118,7 +125,7 @@ class TPQData:
                 self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
             print("Truncated qn sector", qn, "to dim=", self.dimensions[qn])
             print("Largest dim: ", max_dims[qn])
-        """
+        
 
 
                 

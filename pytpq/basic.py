@@ -12,7 +12,7 @@ from collections import OrderedDict
 import pytpq.linalg as pla
 
 
-def tmatrix(ensemble, seed, qn, alpha_tag="AlphasV", beta_tag="BetasV",
+def tmatrix(ensemble, seed, qn, alpha_tag="Alphas", beta_tag="Betas",
             crop=True, croptol=1e-7, maxdepth=None):
     """ Return (cropped) Tmatrix 
 
@@ -40,33 +40,13 @@ def tmatrix(ensemble, seed, qn, alpha_tag="AlphasV", beta_tag="BetasV",
     return diag, offdiag
 
 
-def get_shifts(ensemble, multipliers, qn_to_val):
-    """ Compute shifts in energy for a given modifier and multipliers 
-
-    Args:
-        ensemble       : Ensemble class
-        multiplier     : array of Lagrange multipliers (e.g magnetic field)
-        qn_to_val      : function translating a quantum number to float
-    Returns:
-        dict :  dictionaries of dictionaries with shifts for seed and qn
-    """
-    shifts = dict()
-    for seed in ensemble.seeds:
-        shifts[seed] = dict()
-        for qn in ensemble.qns:
-            shifts[seed][qn] = multipliers * qn_to_val(qn)
-    return shifts
-
-
-def ground_state_energy(ensemble, alpha_tag="AlphasV", beta_tag="BetasV", 
-                        shifts=None, ncores=None, maxdepth=None):
+def ground_state_energy(ensemble, alpha_tag="Alphas", beta_tag="Betas", ncores=None, maxdepth=None):
     """ Get the total ground state energy for all seeds of an ensemble
     
     Args:
         ensemble  : Ensemble class
         alpha_tag : string, which tag is chosen for alpha data
         beta_tag  : string, which tag is chosen for beta data
-        shifts    : optional, dictionary of shifts for every seed and qn
         ncores    : number of parallel processes used for the computation
     Returns:
         OrderedDict, OrderedDict:  dictionaries of ground state energies, 
@@ -81,7 +61,6 @@ def ground_state_energy(ensemble, alpha_tag="AlphasV", beta_tag="BetasV",
             _, e0, e0_qn = _ground_state_energy_seed(seed, ensemble, 
                                                      alpha_tag=alpha_tag, 
                                                      beta_tag=beta_tag, 
-                                                     shifts=shifts,
                                                      maxdepth=maxdepth)
             e0s[seed] = e0
             e0_qns[seed] = e0_qn
@@ -90,16 +69,9 @@ def ground_state_energy(ensemble, alpha_tag="AlphasV", beta_tag="BetasV",
     else:
         e0_func = functools.partial(_ground_state_energy_seed,
                                     ensemble=ensemble, alpha_tag=alpha_tag,
-                                    beta_tag=beta_tag, shifts=shifts,
-                                    maxdepth=maxdepth)
-        # with multiprocessing.Pool(ncores) as p:
-        #     seeds = ensemble.seeds
-        #     results = p.map(e0_func, seeds)
-
+                                    beta_tag=beta_tag, maxdepth=maxdepth)
         results = Parallel(n_jobs=ncores, backend="threading")\
                   (map(delayed(e0_func), ensemble.seeds))
-
-
         for seed, e0, e0_qn in results:
             e0s[seed] = e0
             e0_qns[seed] = e0_qn
@@ -108,20 +80,15 @@ def ground_state_energy(ensemble, alpha_tag="AlphasV", beta_tag="BetasV",
 
 
 
-def _ground_state_energy_seed(seed, ensemble, alpha_tag="AlphasV", 
-                              beta_tag="BetasV", shifts=None,
+def _ground_state_energy_seed(seed, ensemble, alpha_tag="Alphas", 
+                              beta_tag="Betas",
                               maxdepth=None):
     """ Get the total ground state energy for a seed of an ensemble """
     assert len(ensemble.qns) > 0
 
     # Prepare data structure holding e0 and its qn
-    if shifts == None:
-        e0 = np.inf
-        e0_qn = ""
-    else:
-        n_shifts = len(shifts[seed][ensemble.qns[0]])
-        e0 = np.full(n_shifts, np.inf)
-        e0_qn = [ensemble.qns[0]] * n_shifts
+    e0 = np.inf
+    e0_qn = ""
 
     # find energy minimizing quantum number sector
     for qn in ensemble.qns:
@@ -129,17 +96,9 @@ def _ground_state_energy_seed(seed, ensemble, alpha_tag="AlphasV",
             diag, offdiag = tmatrix(ensemble, seed, qn, alpha_tag, 
                                     beta_tag, crop=True,
                                     maxdepth=maxdepth)
-            if shifts == None:
-                e = pla.tmatrix_e0(diag, offdiag)
-                if e < e0:
-                    e0 = e
-                    e0_qn = qn
-            else:
-                es = pla.tmatrix_e0(diag, offdiag) + shifts[seed][qn]
-                smaller_indices = es < e0
-                e0[smaller_indices] = es[smaller_indices]
-                for idx, smaller in enumerate(smaller_indices):
-                    if smaller:
-                        e0_qn[idx] = qn
+            e = pla.tmatrix_e0(diag, offdiag)
+            if e < e0:
+                e0 = e
+                e0_qn = qn
 
     return seed, e0, e0_qn

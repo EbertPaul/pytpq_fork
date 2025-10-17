@@ -3,6 +3,8 @@ import pytpq.basic as pba
 import pytpq.linalg as pla
 from collections import OrderedDict
 
+
+"""
 def dos_spectra(ensemble, shifts=None, e0=None, alpha_tag="AlphasV", 
                 beta_tag="BetasV", crop=True, croptol=1e-7, maxdepth=None):
     
@@ -38,3 +40,4 @@ def dos_spectra(ensemble, shifts=None, e0=None, alpha_tag="AlphasV",
         assert pole_list[seed].shape[0] == weight_list[seed].shape[0]
     
     return pole_list, weight_list
+    """

@@ -67,7 +67,6 @@ def _moment_sum_seed(seed, ensemble, temperatures, k=0, e0=None,
 
     summ = 0
     for qn in ensemble.qns:
-        # print(qn)
         degeneracy = ensemble.degeneracy[qn]
         dimension = ensemble.dimension[qn]
         if degeneracy != 0 and dimension > 0:
@@ -76,6 +75,58 @@ def _moment_sum_seed(seed, ensemble, temperatures, k=0, e0=None,
             summ += moment_avg * degeneracy * dimension
 
     return seed, summ
+
+
+"""
+    Compute moment estimates at temperature beta separately for each qn sector but average over seeds.
+    NO DEGENRACIES INCLUDED!!!
+"""
+def moment_sector_check(ensemble, beta, e0, k=0,
+                        alpha_tag="Alphas", beta_tag="Betas", 
+                        crop=True, check_posdef=True,
+                        maxdepth=None):
+    
+    moment_averages = OrderedDict()
+    for qn in ensemble.qns:
+        moment_avg_qn = 0.0
+        for seed in ensemble.seeds:
+            diag, offdiag = pba.tmatrix(ensemble, seed, qn, alpha_tag, beta_tag, crop, maxdepth=maxdepth)
+            moment_avg = pla.moment_average(diag, offdiag, e0[seed],  np.array([beta]), k, check_posdef)
+            moment_avg_qn += moment_avg[0] * ensemble.dimension[qn]
+        moment_averages[qn] = moment_avg_qn / len(ensemble.seeds)
+
+    return moment_averages
+
+
+"""
+    Compute thermodynamic quantities on each qn sector separately and a high temperature
+    but average over all seeds (to check against full ED).
+"""
+def high_T_sector_check(ensemble, temperature, e0=None,  
+                        alpha_tag="Alphas", beta_tag="Betas", 
+                        crop=True, check_posdef=True,
+                        maxdepth=None):
+    T = temperature[-1] # pick last (highest) temperature for the comparison
+    beta = 1/T
+
+    # find ground state energy for each seed if not given
+    if e0 == None:
+        e0, e0qns = pba.ground_state_energy(ensemble, 
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
+    
+    E_beta = moment_sector_check(ensemble, beta, e0, k=1,
+                                  alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                  crop=crop, check_posdef=check_posdef,
+                                  maxdepth=maxdepth)
+    
+    # normalize energy by best ground state estimate
+    minimum_e0 = abs(min([e0[seed] for seed in ensemble.seeds]))
+    for qn in ensemble.qns:
+        E_beta[qn] = E_beta[qn] / minimum_e0
+    
+    return E_beta
+
 
 
 def thermodynamics(ensemble, temperatures, e0=None,  
@@ -99,6 +150,7 @@ def thermodynamics(ensemble, temperatures, e0=None,
     """
     temperatures = np.array(temperatures)
 
+    # print degeneracies to the user
     for qn in ensemble.qns:
         degeneracy = ensemble.degeneracy[qn]
         print("Quantum number:", qn, "has degeneracy", degeneracy)
@@ -129,6 +181,13 @@ def thermodynamics(ensemble, temperatures, e0=None,
         specific_heat[seed] = ( Q_jackknife[seed] / Z_jackknife[seed] - (E_jackknife[seed] / Z_jackknife[seed])**2)
         specific_heat[seed] = betas**2 * specific_heat[seed]
 
+    # do the consistency check
+    E_highT_qn_dict = high_T_sector_check(ensemble, temperatures, e0,
+                                    alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                    crop=crop, check_posdef=check_posdef,
+                                    maxdepth=maxdepth)
+
     return st.mean(Z), st.error(Z), \
         st.mean(energy), st.error_jackknife(energy), \
-        st.mean(specific_heat), st.error_jackknife(specific_heat)
+        st.mean(specific_heat), st.error_jackknife(specific_heat), E_highT_qn_dict
+

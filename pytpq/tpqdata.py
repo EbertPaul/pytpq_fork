@@ -59,7 +59,7 @@ class TPQData:
                                      " {} and qn {}".format(seed, qn))
 
 
-        """
+        
         # USE THIS FOR PADDING SHORTER ALPHAS TO LARGEST DIMENSION
 
         # in each quantum number sector, find largest dimension (i.e., "longest" alpha vector)
@@ -123,7 +123,7 @@ class TPQData:
                 self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
             print("Truncated qn sector", qn, "to dim=", self.dimensions[qn])
             print("Largest dim: ", max_dims[qn])
-        
+        """
 
 
                 

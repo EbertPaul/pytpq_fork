@@ -25,6 +25,7 @@ def qn_moment_sum(ensemble,  qn_to_val, temperatures,shifts=None, k=1,
                   e0=None, alpha_tag="AlphasV", beta_tag="BetasV", 
                   crop=True, check_posdef=True, ncores=None,
                   maxdepth=None):
+    print("Called qn_moment_sum")
     """ Get the sum of values derived from quantum numbers 
 
     A quantum number average for a given quantum number sector is defined by
@@ -70,10 +71,10 @@ def qn_moment_sum(ensemble,  qn_to_val, temperatures,shifts=None, k=1,
             if degeneracy != 0 and dimension > 0:
                 diag, offdiag = pba.tmatrix(ensemble, seed, qn, alpha_tag, 
                                             beta_tag, crop, maxdepth=maxdepth)
-                print("seed", seed, "qn", qn)
-                print("k",  k)
-                print("qn_to_val", qn_to_val(qn))
-                print("qn_to_val**k", qn_to_val(qn)**k)
+                #print("seed", seed, "qn", qn)
+                #print("k",  k)
+                #print("qn_to_val", qn_to_val(qn))
+                #print("qn_to_val**k", qn_to_val(qn)**k)
                 if shifts == None:
                     moment_avg = pla.moment_average(diag, offdiag, e0[seed], 
                                                     betas, None, 0, check_posdef)
@@ -96,6 +97,7 @@ def moment_sum(ensemble, temperatures, shifts=None, k=0, e0=None,
                alpha_tag="AlphasV", beta_tag="BetasV", 
                crop=True, check_posdef=True, ncores=None,
                maxdepth=None):
+    print("Called moment_sum")
     """ Get the sum of moments of the trigdiagonal matrices. 
 
     A moment average for a given quantum number sector is defined by
@@ -158,6 +160,7 @@ def operator_sum(ensemble, temperatures, operator_tag,
                  alpha_tag="AlphasV", beta_tag="BetasV", 
                  crop=True, check_posdef=True, ncores=None,
                  maxdepth=None):
+    print("Called operator_sum")
     """ Get the sum of moments of the trigdiagonal matrices. 
 
     An operator sum average for a given quantum number sector is defined by
@@ -251,7 +254,7 @@ def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,
                      crop=True, check_posdef=True,
                      maxdepth=None):
     # print(seed)
-
+    print("Called _moment_sum_seed for seed", seed)
     betas = 1. / temperatures
 
     summ = 0
@@ -284,6 +287,7 @@ def partition(ensemble, temperatures, shifts=None, e0=None,
               alpha_tag="AlphasV", beta_tag="BetasV", 
               crop=True, check_posdef=True, ncores=None,
               maxdepth=None):
+    print("Called partition")
     """ Get the partition function for a given set of temperatures and shifts
     
     Args:
@@ -315,6 +319,7 @@ def energy(ensemble, temperatures, shifts=None, e0=None,
            alpha_tag="AlphasV", beta_tag="BetasV", 
            crop=True, check_posdef=True, ncores=None,
            maxdepth=None):
+    print("Called energy")
     """ Get the energy for a given set of temperatures and shifts
     
     Args:
@@ -355,6 +360,7 @@ def entropy(ensemble, temperatures, shifts=None, e0=None,
             alpha_tag="AlphasV", beta_tag="BetasV", 
             crop=True, check_posdef=True, ncores=None,
             maxdepth=None):
+    print("Called entropy")
     """ Get the entropy for a given set of temperatures and shifts
     
     Args:
@@ -404,6 +410,7 @@ def specific_heat(ensemble, temperatures, shifts=None, e0=None,
                   alpha_tag="AlphasV", beta_tag="BetasV", 
                   crop=True, check_posdef=True, ncores=None,
                   maxdepth=None):
+    print("Called specific_heat")
     """ Get the specific heat for a given set of temperatures and shifts
     
     Args:
@@ -460,6 +467,7 @@ def thermodynamics(ensemble, temperatures, shifts=None, e0=None,
                    alpha_tag="AlphasV", beta_tag="BetasV", 
                    crop=True, check_posdef=True, ncores=None,
                    maxdepth=None):
+    print("Called thermodynamics")
     """ Get the partition / energy / specific heat for a given set 
         of temperatures and shifts
     
@@ -522,6 +530,7 @@ def quantumnumber(ensemble, qn_to_val, temperatures, shifts=None, e0=None,
                   alpha_tag="AlphasV", beta_tag="BetasV", 
                   crop=True, check_posdef=True, ncores=None,
                   maxdepth=None):
+    print("Called quantumnumber")
     """ Get quantum number average for a given set of temperatures and shifts
     
     Args:
@@ -567,6 +576,7 @@ def susceptibility(ensemble, qn_to_val, temperatures, shifts=None, e0=None,
                    alpha_tag="AlphasV", beta_tag="BetasV", 
                    crop=True, check_posdef=True, ncores=None,
                    maxdepth=None):
+    print("Called susceptibility")
     """ Get quantum number susceptibility for given set of tempraturs and shifts
     
     Args:
@@ -621,6 +631,7 @@ def operator(ensemble, temperatures, operator_tag, shifts=None, e0=None,
              alpha_tag="AlphasV", beta_tag="BetasV", 
              crop=True, check_posdef=True, ncores=None,
              maxdepth=None):
+    print("Called operator")
     """ Get quantum number susceptibility for given set of tempraturs and shifts
     
     Args:

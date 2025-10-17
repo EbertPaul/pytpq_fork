@@ -49,10 +49,7 @@ class TPQData:
 
             # Check whether quantum numbers are unique across all seeds
             if set(qns) != set(self.qns):
-                print(seed)
-                print(qns)
-                print(self.qns)
-
+                print("self.qns = ", self.qns, "but seed=", seed, " has qns = ", qns)
                 raise ValueError("Not all seeds have the same set"
                                  " of quantum numbers")
 

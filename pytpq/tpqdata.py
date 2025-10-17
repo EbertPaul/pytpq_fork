@@ -72,11 +72,14 @@ class TPQData:
 
         # pad all shorter alphas in each quantum number sector with zeros to match largest dimension
         for qn in self.qns:
+            max_pad = 0
             for seed in self.seeds:
                 target_dim = self.dimensions[qn]
                 current_dim = int(self.data[seed][qn][self.dimension_tag])
                 if current_dim < target_dim:
                     pad_width = target_dim - current_dim
+                    if pad_width > max_pad:
+                        max_pad = pad_width
                     self.data[seed][qn][self.alpha_tag] = np.pad(self.data[seed][qn][self.alpha_tag], 
                                                                  (0, pad_width), 
                                                                  mode='constant', constant_values=0)
@@ -87,6 +90,8 @@ class TPQData:
                                                                   (0, pad_width), 
                                                                   mode='constant', constant_values=0)
                     self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
+            print("Padded qn sector", qn, "to dim=", self.dimensions[qn])
+            print("Max padding applied:", max_pad)
 
         """ 
         # Find smallest and largest dimension of alphas for each quantum number sector

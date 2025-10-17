@@ -109,11 +109,9 @@ def high_T_sector_check(ensemble, temperature, e0=None,
     T = temperature[-1] # pick last (highest) temperature for the comparison
     beta = 1/T
 
-    # find ground state energy for each seed if not given
-    if e0 == None:
-        e0, e0qns = pba.ground_state_energy(ensemble, 
-                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
-                                            maxdepth=maxdepth)
+    # use fixed energy offset for normalization in all sectors
+    e0_val = -10
+    e0 = {seed:e0_val for seed in ensemble.seeds}
     
     E_beta = moment_sector_check(ensemble, beta, e0, k=1,
                                   alpha_tag=alpha_tag, beta_tag=beta_tag,
@@ -121,9 +119,8 @@ def high_T_sector_check(ensemble, temperature, e0=None,
                                   maxdepth=maxdepth)
     
     # normalize energy by best ground state estimate
-    minimum_e0 = abs(min([e0[seed] for seed in ensemble.seeds]))
     for qn in ensemble.qns:
-        E_beta[qn] = E_beta[qn] / minimum_e0
+        E_beta[qn] = E_beta[qn] / e0_val
     
     return E_beta
 

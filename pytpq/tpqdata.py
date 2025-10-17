@@ -33,7 +33,7 @@ class TPQData:
         qns_for_each_seed = dict()
         for seed, sectors in self.data.items():
             qns_for_each_seed[seed] = [tuple(map(str, sector)) for sector in sectors]
-        print("Quantum numbers for each seed:", qns_for_each_seed)
+        #print("Quantum numbers for each seed:", qns_for_each_seed)
             
         
         self.qns = qns_for_each_seed[self.seeds[0]]

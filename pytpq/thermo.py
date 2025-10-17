@@ -19,7 +19,6 @@ def moment_sum(ensemble, temperatures, shifts=None, k=0, e0=None,
                alpha_tag="AlphasV", beta_tag="BetasV", 
                crop=True, check_posdef=True, ncores=None,
                maxdepth=None):
-    print("Called moment_sum")
     """ Get the sum of moments of the trigdiagonal matrices. 
 
     A moment average for a given quantum number sector is defined by
@@ -83,13 +82,13 @@ def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,
                      crop=True, check_posdef=True,
                      maxdepth=None):
     # print(seed)
-    print("Called _moment_sum_seed for seed", seed)
     betas = 1. / temperatures
 
     summ = 0
     for qn in ensemble.qns:
         # print(qn)
         degeneracy = ensemble.degeneracy[qn]
+        print("Degeneracy for qn", qn, ":", degeneracy)
         dimension = ensemble.dimension[qn]
         if degeneracy != 0 and dimension > 0:
             diag, offdiag = pba.tmatrix(ensemble, seed, qn, alpha_tag, 
@@ -115,7 +114,6 @@ def thermodynamics(ensemble, temperatures, shifts=None, e0=None,
                    alpha_tag="AlphasV", beta_tag="BetasV", 
                    crop=True, check_posdef=True, ncores=None,
                    maxdepth=None):
-    print("Called thermodynamics")
     """ Get the partition / energy / specific heat for a given set 
         of temperatures and shifts
     

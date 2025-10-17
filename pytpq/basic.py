@@ -6,7 +6,6 @@ Basic routines for an ensemble
 """
 import numpy as np
 import functools
-from joblib import Parallel, delayed
 from collections import OrderedDict
 
 import pytpq.linalg as pla
@@ -40,14 +39,13 @@ def tmatrix(ensemble, seed, qn, alpha_tag="Alphas", beta_tag="Betas",
     return diag, offdiag
 
 
-def ground_state_energy(ensemble, alpha_tag="Alphas", beta_tag="Betas", ncores=None, maxdepth=None):
+def ground_state_energy(ensemble, alpha_tag="Alphas", beta_tag="Betas", maxdepth=None):
     """ Get the total ground state energy for all seeds of an ensemble
     
     Args:
         ensemble  : Ensemble class
         alpha_tag : string, which tag is chosen for alpha data
         beta_tag  : string, which tag is chosen for beta data
-        ncores    : number of parallel processes used for the computation
     Returns:
         OrderedDict, OrderedDict:  dictionaries of ground state energies, 
                                    and corresponding quantum number sector
@@ -56,25 +54,13 @@ def ground_state_energy(ensemble, alpha_tag="Alphas", beta_tag="Betas", ncores=N
     e0_qns = OrderedDict()
 
     # Get ground state energy for every seed serial
-    if ncores == None:
-        for seed in ensemble.seeds:
-            _, e0, e0_qn = _ground_state_energy_seed(seed, ensemble, 
-                                                     alpha_tag=alpha_tag, 
-                                                     beta_tag=beta_tag, 
-                                                     maxdepth=maxdepth)
-            e0s[seed] = e0
-            e0_qns[seed] = e0_qn
-
-    # Parallelization over seeds
-    else:
-        e0_func = functools.partial(_ground_state_energy_seed,
-                                    ensemble=ensemble, alpha_tag=alpha_tag,
-                                    beta_tag=beta_tag, maxdepth=maxdepth)
-        results = Parallel(n_jobs=ncores, backend="threading")\
-                  (map(delayed(e0_func), ensemble.seeds))
-        for seed, e0, e0_qn in results:
-            e0s[seed] = e0
-            e0_qns[seed] = e0_qn
+    for seed in ensemble.seeds:
+        _, e0, e0_qn = _ground_state_energy_seed(seed, ensemble, 
+                                                    alpha_tag=alpha_tag, 
+                                                    beta_tag=beta_tag, 
+                                                    maxdepth=maxdepth)
+        e0s[seed] = e0
+        e0_qns[seed] = e0_qn
 
     return e0s, e0_qns
 

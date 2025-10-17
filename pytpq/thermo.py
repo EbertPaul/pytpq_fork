@@ -9,7 +9,6 @@ from collections import OrderedDict
 import time
 import multiprocessing
 import functools
-from joblib import Parallel, delayed
 
 import pytpq.statistics_for_tpq as st
 import pytpq.linalg as pla
@@ -17,7 +16,7 @@ import pytpq.basic as pba
 
 def moment_sum(ensemble, temperatures, k=0, e0=None,  
                alpha_tag="Alphas", beta_tag="Betas", 
-               crop=True, check_posdef=True, ncores=None,
+               crop=True, check_posdef=True,
                maxdepth=None):
     """ Get the sum of moments of the trigdiagonal matrices. 
 
@@ -38,7 +37,6 @@ def moment_sum(ensemble, temperatures, k=0, e0=None,
         beta_tag  : string, which tag is chosen for offdiagonal data
         crop      : flag whether tmatrix is cropped on deflation (def: True)
         check_posdef : check whether all weights are positive in exponentiation
-        ncores    : number of parallel processes used for the computation
     Returns:
         OrderedDict : sum of moment averages for a given seed
     """
@@ -47,29 +45,15 @@ def moment_sum(ensemble, temperatures, k=0, e0=None,
         raise ValueError("Invalid temperatures")
     
     if e0 == None:
-        e0, e0qns = pba.ground_state_energy(ensemble, ncores=ncores, 
+        e0, e0qns = pba.ground_state_energy(ensemble, 
                                             alpha_tag=alpha_tag, beta_tag=beta_tag,
                                             maxdepth=maxdepth)
     moment_sum = OrderedDict()
-    if ncores == None:
-        for seed in ensemble.seeds:
-            _, summ = _moment_sum_seed(seed, ensemble, temperatures, k, e0, alpha_tag, 
-                                       beta_tag, crop, check_posdef,
-                                       maxdepth=maxdepth)
-            moment_sum[seed] = summ
-
-    # Parallelization over seeds
-    else:
-        sum_func = functools.partial(_moment_sum_seed, ensemble=ensemble, 
-                                     temperatures=temperatures, 
-                                     k=k, e0=e0, alpha_tag=alpha_tag,
-                                     beta_tag=beta_tag, crop=crop, 
-                                     check_posdef=check_posdef)
-        with multiprocessing.Pool(ncores) as p:
-            results = p.map(sum_func, ensemble.seeds)
-
-        for seed, summ in results:
-            moment_sum[seed] = summ
+    for seed in ensemble.seeds:
+        _, summ = _moment_sum_seed(seed, ensemble, temperatures, k, e0, alpha_tag, 
+                                    beta_tag, crop, check_posdef,
+                                    maxdepth=maxdepth)
+        moment_sum[seed] = summ
 
     return moment_sum
 
@@ -96,7 +80,7 @@ def _moment_sum_seed(seed, ensemble, temperatures, k=0, e0=None,
 
 def thermodynamics(ensemble, temperatures, e0=None,  
                    alpha_tag="Alphas", beta_tag="Betas", 
-                   crop=True, check_posdef=True, ncores=None,
+                   crop=True, check_posdef=True,
                    maxdepth=None):
     """ Get the partition / energy / specific heat 
     
@@ -109,7 +93,6 @@ def thermodynamics(ensemble, temperatures, e0=None,
         beta_tag       : string, which tag is chosen for offdiagonal data
         crop           : flag whethr tmatrix is cropped on deflation (def: True)
         check_posdef   : check whethr all weights are positive in exponentiation
-        ncores         : number of parallel processes used for the computation
     Returns:
         np.array, np.array: mean / error estimate for specific heat for 
                             every temperature
@@ -121,16 +104,16 @@ def thermodynamics(ensemble, temperatures, e0=None,
         print("Quantum number:", qn, "has degeneracy", degeneracy)
 
     if e0 == None:
-        e0, e0qns = pba.ground_state_energy(ensemble, ncores=ncores, 
+        e0, e0qns = pba.ground_state_energy(ensemble, 
                                             alpha_tag=alpha_tag, beta_tag=beta_tag,
                                             maxdepth=maxdepth)
 
     Z = moment_sum(ensemble, temperatures, 0, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
+                   alpha_tag, beta_tag, crop, check_posdef, maxdepth)
     E = moment_sum(ensemble, temperatures, 1, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
+                   alpha_tag, beta_tag, crop, check_posdef, maxdepth)
     Q = moment_sum(ensemble, temperatures, 2, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
+                   alpha_tag, beta_tag, crop, check_posdef, maxdepth)
 
     Z_jackknife = st.jackknife(Z)
     E_jackknife = st.jackknife(E)

@@ -8,11 +8,9 @@ from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
 import re
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 import h5py
-import multiprocessing
 import functools
-from joblib import Parallel, delayed
 
 
 
@@ -179,7 +177,7 @@ def _read_single_file(fl, regex, seed_inds, qn_inds):
 
 
 
-def read_data(directory, regex, seed_inds, qn_inds, verbose=True, ncores=None):
+def read_data(directory, regex, seed_inds, qn_inds, verbose=True):
     """ Read data for various seeds and quantities using regular expression
     
     Args:
@@ -188,7 +186,6 @@ def read_data(directory, regex, seed_inds, qn_inds, verbose=True, ncores=None):
         seed_inds         : indices in the regex representing the seed index
         qn_inds           : indices in the regex representing the quantum nmbers
         verbose (bool)    : print the matching files
-        ncores            : number of parallel cores to read
     Returns:
         TPQData:    TPQdata object of quantities for seeds and quantum numbers
     """
@@ -210,30 +207,12 @@ def read_data(directory, regex, seed_inds, qn_inds, verbose=True, ncores=None):
 
 
     # Read files in serial
-    if ncores == None:
-        for fl in matched_files:
-            seed, qns, data = _read_single_file(fl, regex, seed_inds, qn_inds)
+    for fl in matched_files:
+        seed, qns, data = _read_single_file(fl, regex, seed_inds, qn_inds)
 
-            if seed not in data_for_seed.keys():
-                data_for_seed[seed] = OrderedDict()
+        if seed not in data_for_seed.keys():
+            data_for_seed[seed] = OrderedDict()
 
-            data_for_seed[seed][qns] = data
-   
-    # Parallelization over files
-    else:
-        read_func = functools.partial(_read_single_file, regex=regex, 
-                                      seed_inds=seed_inds, qn_inds=qn_inds)
-
-        # with multiprocessing.Pool(ncores) as p:
-        #     results = p.map(read_func, matched_files)
-
-        results = Parallel(n_jobs=ncores, backend="threading")\
-                  (map(delayed(read_func), matched_files))
-
-        for seed, qns, data in results:
-            if seed not in data_for_seed.keys():
-                data_for_seed[seed] = OrderedDict()
-
-            data_for_seed[seed][qns] = data                    
+        data_for_seed[seed][qns] = data                 
                 
     return TPQData(data_for_seed)

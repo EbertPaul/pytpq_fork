@@ -6,7 +6,6 @@ Functions to get statistics over random samples
 """
 import numpy as np
 import scipy as sp
-import scipy.stats
 from collections import OrderedDict
 
 def data_dict_to_npdata(data):

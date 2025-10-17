@@ -88,7 +88,6 @@ def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,
     for qn in ensemble.qns:
         # print(qn)
         degeneracy = ensemble.degeneracy[qn]
-        print("Degeneracy for qn", qn, ":", degeneracy)
         dimension = ensemble.dimension[qn]
         if degeneracy != 0 and dimension > 0:
             diag, offdiag = pba.tmatrix(ensemble, seed, qn, alpha_tag, 
@@ -133,6 +132,10 @@ def thermodynamics(ensemble, temperatures, shifts=None, e0=None,
                             every temperature and shift
     """
     temperatures = np.array(temperatures)
+
+    for qn in ensemble.qns:
+        degeneracy = ensemble.degeneracy[qn]
+        print("Quantum number:", qn, "has degeneracy", degeneracy)
 
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, shifts=shifts, ncores=ncores, 

@@ -104,7 +104,7 @@ def _moment_sum_seed(seed, ensemble, temperatures, shifts=None, k=0, e0=None,
             #print(qn, dimension, degeneracy, binom(16, int(qn[0]))*binom(16, int(qn[1])))
             #print("avg", moment_avg * degeneracy * dimension)
             #print()
-            summ += moment_avg * degeneracy * dimension
+            summ += moment_avg * degeneracy #* dimension
 
     return seed, summ
 

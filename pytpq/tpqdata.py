@@ -60,6 +60,35 @@ class TPQData:
                     raise ValueError("dimension not defined for seed"
                                      " {} and qn {}".format(seed, qn))
 
+        # in each quantum number sector, find largest dimension (i.e., "longest" alpha vector)
+        self.dimensions = dict()
+        for qn in self.qns:
+            max_dim = 0
+            for seed in self.seeds:
+                new_dim = int(self.data[seed][qn][self.dimension_tag])
+                if new_dim > max_dim:
+                    max_dim = new_dim
+            self.dimensions[qn] = max_dim
+
+        # pad all shorter alphas in each quantum number sector with zeros to match largest dimension
+        for qn in self.qns:
+            for seed in self.seeds:
+                target_dim = self.dimensions[qn]
+                current_dim = int(self.data[seed][qn][self.dimension_tag])
+                if current_dim < target_dim:
+                    pad_width = target_dim - current_dim
+                    self.data[seed][qn][self.alpha_tag] = np.pad(self.data[seed][qn][self.alpha_tag], 
+                                                                 (0, pad_width), 
+                                                                 mode='constant', constant_values=0)
+                    self.data[seed][qn][self.beta_tag] = np.pad(self.data[seed][qn][self.beta_tag], 
+                                                                (0, pad_width), 
+                                                                mode='constant', constant_values=0)
+                    self.data[seed][qn][self.eigval_tag] = np.pad(self.data[seed][qn][self.eigval_tag], 
+                                                                  (0, pad_width), 
+                                                                  mode='constant', constant_values=0)
+                    self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
+
+        """ 
         # Find smallest and largest dimension of alphas for each quantum number sector
         self.dimensions = dict()
         max_dims = dict()
@@ -82,8 +111,10 @@ class TPQData:
                 self.data[seed][qn][self.beta_tag] = self.data[seed][qn][self.beta_tag][:self.dimensions[qn]]
                 self.data[seed][qn][self.eigval_tag] = self.data[seed][qn][self.eigval_tag][:self.dimensions[qn]]
                 self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
-            print("Truncated data for quantum number sector", qn, "to dimension", self.dimensions[qn])
-            print("Largest dimension encountered: ", max_dims[qn])
+            print("Truncated qn sector", qn, "to dim=", self.dimensions[qn])
+            print("Largest dim: ", max_dims[qn])
+        """
+
 
                 
 

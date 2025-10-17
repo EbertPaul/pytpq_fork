@@ -120,7 +120,7 @@ def high_T_sector_check(ensemble, temperature, e0=None,
     
     # normalize energy by best ground state estimate
     for qn in ensemble.qns:
-        E_beta[qn] = E_beta[qn] / e0_val
+        E_beta[qn] = E_beta[qn] / abs(e0_val)
     
     return E_beta
 

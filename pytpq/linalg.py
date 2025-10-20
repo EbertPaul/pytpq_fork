@@ -99,7 +99,7 @@ def moment_average(diag, offdiag, e0, betas, k=0, check_posdef=True):
                                 optimize="optimal")
     #tensor_U_dag0 = np.einsum("ij, i-> ij", moment_tensor, U_dag[:,0], optimize="optimal")
     #avg = np.einsum("i, ij -> j", U[0,:], tensor_U_dag0, optimize="optimal")
-    e1 = np.zeros(U.shape[0], dtype=complex)
+    e1 = np.zeros(U.shape[0])
     e1[0] = 1.0
     tensor_U_dag0 = np.einsum("ij, i-> ij", moment_tensor, e1, optimize="optimal")
     avg = np.einsum("i, ij -> j", e1, tensor_U_dag0, optimize="optimal")

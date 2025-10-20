@@ -80,7 +80,7 @@ def boltzmann_tensor(eigs, e0, betas, check_posdef=True):
 def moment_average(diag, offdiag, e0, betas, k=0, check_posdef=True):
     """ Compute a moment average of a tridiagonal matrix of the form
 
-    M_{ij}^{(k)}= e_0 (T+\mu_j)^k \exp( - \beta_i (T - e0 + \mu_j) e_0
+    M_{ij}^{(k)}= e_0 (T)^k \exp( - \beta_i (T - e0) e_0
 
     Args:
          diag     :  np.array with diagonal elements, length N
@@ -105,6 +105,7 @@ def moment_average(diag, offdiag, e0, betas, k=0, check_posdef=True):
 
 def operator_average(diag, offdiag, operator, e0, betas, k=1, 
                      check_posdef=True):
+    print("Called operator_average")
     """ Compute an operator average of a tridiagonal matrix of the form
 
     (A)_{ij}^{(k)}= e_0 \exp( - \beta_i/2 (T - e0) A \exp( - \beta_i/2 (T - e0) e_0

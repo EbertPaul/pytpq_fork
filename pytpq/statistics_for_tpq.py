@@ -44,7 +44,7 @@ def error(data):
          np.array: array of error of given data
     """
     npdata = data_dict_to_npdata(data)
-    return sp.stats.sem(npdata, axis=0)
+    return sp.stats.sem(npdata, axis=0) # computes the standard error of the mean of all jackknife replicates
 
 def error_jackknife(data):
     """ Compute the error of mean of a data dict of different seeds
@@ -55,4 +55,4 @@ def error_jackknife(data):
          np.array: array of error of given data
     """
     npdata = data_dict_to_npdata(data)
-    return (npdata.shape[0]-1) * sp.stats.sem(npdata, axis=0)
+    return (npdata.shape[0]-1) * sp.stats.sem(npdata, axis=0) # computes the standard error of the mean of all jackknife replicates

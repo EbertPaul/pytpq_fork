@@ -102,7 +102,7 @@ def moment_sector_check(ensemble, beta, e0, k=0,
     Compute thermodynamic quantities on each qn sector separately and a high temperature
     but average over all seeds (to check against full ED).
 """
-def high_T_sector_check(ensemble, temperature, e0=None,  
+def high_T_sector_check(ensemble, temperature,  
                         alpha_tag="Alphas", beta_tag="Betas", 
                         crop=True, check_posdef=True,
                         maxdepth=None):
@@ -139,8 +139,8 @@ def thermodynamics(ensemble, temperatures, e0=None,
         e0             : precomputed ground state energy, optional
         alpha_tag      : string, which tag is chosen for diagonal data
         beta_tag       : string, which tag is chosen for offdiagonal data
-        crop           : flag whethr tmatrix is cropped on deflation (def: True)
-        check_posdef   : check whethr all weights are positive in exponentiation
+        crop           : flag whether tmatrix is cropped on deflation (def: True)
+        check_posdef   : check whether all weights are positive in exponentiation
     Returns:
         np.array, np.array: mean / error estimate for specific heat for 
                             every temperature
@@ -179,7 +179,7 @@ def thermodynamics(ensemble, temperatures, e0=None,
         specific_heat[seed] = betas**2 * specific_heat[seed]
 
     # do the consistency check
-    E_highT_qn_dict = high_T_sector_check(ensemble, temperatures, e0,
+    E_highT_qn_dict = high_T_sector_check(ensemble, temperatures,
                                     alpha_tag=alpha_tag, beta_tag=beta_tag,
                                     crop=crop, check_posdef=check_posdef,
                                     maxdepth=maxdepth)

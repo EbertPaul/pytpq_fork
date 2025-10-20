@@ -51,15 +51,28 @@ class TPQData:
                 raise ValueError("Not all seeds have the same set"
                                  " of quantum numbers")
 
-        # Check if dimension is defined for all hdf5 files
+        # Check if block dimension is defined for all hdf5 files
         for seed in self.seeds:
             for qn in self.qns:
                 if not self.dimension_tag in self.data[seed][qn].keys():
-                    raise ValueError("dimension not defined for seed"
+                    raise ValueError("Block dimension not defined for seed"
                                      " {} and qn {}".format(seed, qn))
+                
+        # check if block dimension is consistent across all seeds for each quantum number sector
+        self.dimensions = dict()
+        for qn in self.qns:
+            dim = int(self.data[self.seeds[0]][qn][self.dimension_tag])
+            for seed in self.seeds[1:]:
+                new_dim = int(self.data[seed][qn][self.dimension_tag])
+                if new_dim != dim:
+                    raise ValueError("Inconsistent block dimensions for qn"
+                                     " sector {}: dim={} for seed {}, "
+                                     "dim={} for seed {}".format(
+                                         qn, dim, self.seeds[0],
+                                         new_dim, seed))
+            self.dimensions[qn] = dim      
 
-
-        
+        """
         # USE THIS FOR PADDING SHORTER ALPHAS TO LARGEST DIMENSION
 
         # in each quantum number sector, find largest dimension (i.e., "longest" alpha vector)
@@ -94,7 +107,7 @@ class TPQData:
                     self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
             print("Padded qn sector", qn, "to dim=", self.dimensions[qn])
             print("Max padding applied:", max_pad)
-        """
+       
 
         
         # USE THIS FOR TRUNCATING LONGER ALPHAS TO SMALLEST DIMENSION

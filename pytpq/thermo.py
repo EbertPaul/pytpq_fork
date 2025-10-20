@@ -111,7 +111,7 @@ def high_T_sector_check(ensemble, temperature,
 
     # use fixed energy offset for normalization in all sectors
     e0_val = -10
-    e0 = {seed:e0_val for seed in ensemble.seeds}
+    e0 = {seed:e0_val for seed in ensemble.seeds} # dict sending all seeds to e0_val
     
     E_beta = moment_sector_check(ensemble, beta, e0, k=1,
                                   alpha_tag=alpha_tag, beta_tag=beta_tag,

@@ -58,6 +58,7 @@ class Ensemble:
                                 total_dim,
                                 self.tpq_data.full_hilbert_space_dim))
             print(" ------ HILBERT SPACE DIMENSION CHECKS PASSED ------")
+            print("dim H = ", total_dim)
         else:
             print("Dimension of sum of degenerate blocks is {}. " 
                   "Cannot check against user-defined value because 'None' "

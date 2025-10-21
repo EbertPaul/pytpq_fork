@@ -40,7 +40,25 @@ class Ensemble:
             self.dimension[qn] = self.tpq_data.dimension(qn_degeneracy_map[qn])
             self.exact[qn]= False
 
-    
+        # check if all degeneracies are consistent in the sense that the sum
+        # of all degenerate blocks yields the correct Hilbert space dimension
+        total_dim = 0
+        for qn in self.qns:
+            total_dim += self.degeneracy[qn] * self.dimension[qn]
+        if self.tpq_data.full_hilbert_space_dim != None:
+            if total_dim != self.tpq_data.full_hilbert_space_dim:
+                raise ValueError("Inconsistent degeneracies in ensemble: "
+                                 "sum of all degenerate block dimensions"
+                                 " is {}, but full Hilbert space dimension"
+                                 " given by user is {}".format(
+                                total_dim,
+                                self.tpq_data.full_hilbert_space_dim))
+            print(" ------ TOTAL HILBERT SPACE DIMENSION MATCHES ------")
+        else:
+            print("Dimension of sum of degenerate blocks is {}. " 
+                  "Cannot check against user defined value because 'None' "
+                  "was passed to TPQData class.".format(total_dim))
+
     def data(self, seed, qn, tag):
         return self.tpq_data.dataset(seed, self.qn_degeneracy_map[qn])[tag]
        

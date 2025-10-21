@@ -16,13 +16,14 @@ import functools
 
 class TPQData:
 
-    def __init__(self, data, alpha_tag="Alphas", beta_tag="Betas", dimension_tag="Dimension", eigval_tag="Eigenvalues"):
+    def __init__(self, data, full_hilbert_space_dim=None, alpha_tag="Alphas", beta_tag="Betas", dimension_tag="Dimension", eigval_tag="Eigenvalues"):
         self.data = data
         self.seeds = list(data.keys())
         self.alpha_tag = alpha_tag
         self.beta_tag = beta_tag
         self.dimension_tag = dimension_tag
         self.eigval_tag = eigval_tag
+        self.full_hilbert_space_dim = full_hilbert_space_dim # allowing consistency check in ensemble class
 
         if len(self.seeds) == 0:
             raise ValueError("No seeds to initialize TPQData")

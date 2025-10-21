@@ -191,7 +191,7 @@ def _read_single_file(fl, regex, seed_inds, qn_inds):
 
 
 
-def read_data(directory, regex, seed_inds, qn_inds, verbose=True):
+def read_data(directory, regex, seed_inds, qn_inds, full_hilbert_space_dim=None, verbose=True):
     """ Read data for various seeds and quantities using regular expression
     
     Args:
@@ -199,6 +199,7 @@ def read_data(directory, regex, seed_inds, qn_inds, verbose=True):
         regex (str)       : regular expression to match files in the directory
         seed_inds         : indices in the regex representing the seed index
         qn_inds           : indices in the regex representing the quantum nmbers
+        full_hilbert_space_dim (int) : full Hilbert space dimension of the system for consistency checks (e.g. 2^N for N spins-1/2)
         verbose (bool)    : print the matching files
     Returns:
         TPQData:    TPQdata object of quantities for seeds and quantum numbers
@@ -227,6 +228,6 @@ def read_data(directory, regex, seed_inds, qn_inds, verbose=True):
         if seed not in data_for_seed.keys():
             data_for_seed[seed] = OrderedDict()
 
-        data_for_seed[seed][qns] = data                 
-                
-    return TPQData(data_for_seed)
+        data_for_seed[seed][qns] = data
+
+    return TPQData(data_for_seed, full_hilbert_space_dim=full_hilbert_space_dim)

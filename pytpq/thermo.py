@@ -78,6 +78,7 @@ def _moment_sum_seed(seed, ensemble, temperatures, k=0, e0=None,
 
 
 """
+    DEBUG ONLY:
     Compute moment estimates at temperature beta separately for each qn sector but average over seeds.
     NO DEGENRACIES INCLUDED!!!
 """
@@ -147,11 +148,6 @@ def thermodynamics(ensemble, temperatures, e0=None,
     """
     temperatures = np.array(temperatures)
 
-    # print degeneracies to the user
-    for qn in ensemble.qns:
-        degeneracy = ensemble.degeneracy[qn]
-        print("Quantum number:", qn, "has degeneracy", degeneracy)
-
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, 
                                             alpha_tag=alpha_tag, beta_tag=beta_tag,
@@ -178,13 +174,7 @@ def thermodynamics(ensemble, temperatures, e0=None,
         specific_heat[seed] = ( Q_jackknife[seed] / Z_jackknife[seed] - (E_jackknife[seed] / Z_jackknife[seed])**2)
         specific_heat[seed] = betas**2 * specific_heat[seed]
 
-    # do the consistency check
-    E_highT_qn_dict = high_T_sector_check(ensemble, temperatures,
-                                    alpha_tag=alpha_tag, beta_tag=beta_tag,
-                                    crop=crop, check_posdef=check_posdef,
-                                    maxdepth=maxdepth)
-
     return st.mean(Z), st.error(Z), \
         st.mean(energy), st.error_jackknife(energy), \
-        st.mean(specific_heat), st.error_jackknife(specific_heat), E_highT_qn_dict
+        st.mean(specific_heat), st.error_jackknife(specific_heat)
 

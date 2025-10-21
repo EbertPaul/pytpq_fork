@@ -5,7 +5,6 @@ Basic routines for an ensemble
 :author: Alexander Wietek
 """
 import numpy as np
-import functools
 from collections import OrderedDict
 
 import pytpq.linalg as pla

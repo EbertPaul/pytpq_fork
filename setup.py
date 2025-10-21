@@ -8,7 +8,6 @@ setup(
         'numpy',
         'scipy',
         'numexpr',
-        'joblib',
         'h5py',
         ],
 )

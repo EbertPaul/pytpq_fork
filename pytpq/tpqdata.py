@@ -32,7 +32,6 @@ class TPQData:
         qns_for_each_seed = dict()
         for seed, sectors in self.data.items():
             qns_for_each_seed[seed] = [tuple(map(str, sector)) for sector in sectors]
-        #print("Quantum numbers for each seed:", qns_for_each_seed)
             
         
         self.qns = qns_for_each_seed[self.seeds[0]]
@@ -72,72 +71,6 @@ class TPQData:
                                          qn, dim, self.seeds[0],
                                          new_dim, seed))
             self.dimensions[qn] = dim      
-
-        """
-        # USE THIS FOR PADDING SHORTER ALPHAS TO LARGEST DIMENSION
-
-        # in each quantum number sector, find largest dimension (i.e., "longest" alpha vector)
-        self.dimensions = dict()
-        for qn in self.qns:
-            max_dim = 0
-            for seed in self.seeds:
-                new_dim = int(self.data[seed][qn][self.dimension_tag])
-                if new_dim > max_dim:
-                    max_dim = new_dim
-            self.dimensions[qn] = max_dim
-
-        # pad all shorter alphas in each quantum number sector with zeros to match largest dimension
-        for qn in self.qns:
-            max_pad = 0
-            for seed in self.seeds:
-                target_dim = self.dimensions[qn]
-                current_dim = int(self.data[seed][qn][self.dimension_tag])
-                if current_dim < target_dim:
-                    pad_width = target_dim - current_dim
-                    if pad_width > max_pad:
-                        max_pad = pad_width
-                    self.data[seed][qn][self.alpha_tag] = np.pad(self.data[seed][qn][self.alpha_tag], 
-                                                                 (0, pad_width), 
-                                                                 mode='constant', constant_values=0)
-                    self.data[seed][qn][self.beta_tag] = np.pad(self.data[seed][qn][self.beta_tag], 
-                                                                (0, pad_width), 
-                                                                mode='constant', constant_values=0)
-                    self.data[seed][qn][self.eigval_tag] = np.pad(self.data[seed][qn][self.eigval_tag], 
-                                                                  (0, pad_width), 
-                                                                  mode='constant', constant_values=0)
-                    self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
-            print("Padded qn sector", qn, "to dim=", self.dimensions[qn])
-            print("Max padding applied:", max_pad)
-       
-
-        
-        # USE THIS FOR TRUNCATING LONGER ALPHAS TO SMALLEST DIMENSION
-
-        # Find smallest and largest dimension of alphas for each quantum number sector
-        self.dimensions = dict()
-        max_dims = dict()
-        for qn in self.qns:
-            min_dim = np.inf
-            max_dim = 0
-            for seed in self.seeds:
-                new_dim = int(self.data[seed][qn][self.dimension_tag])
-                if new_dim < min_dim:
-                    min_dim = new_dim
-                if new_dim > max_dim:
-                    max_dim = new_dim
-            self.dimensions[qn] = min_dim
-            max_dims[qn] = max_dim
-       
-        # For each quantum number sector, truncate data to smallest dimension across all seeds
-        for qn in self.qns:
-            for seed in self.seeds:
-                self.data[seed][qn][self.alpha_tag] = self.data[seed][qn][self.alpha_tag][:self.dimensions[qn]]
-                self.data[seed][qn][self.beta_tag] = self.data[seed][qn][self.beta_tag][:self.dimensions[qn]]
-                self.data[seed][qn][self.eigval_tag] = self.data[seed][qn][self.eigval_tag][:self.dimensions[qn]]
-                self.data[seed][qn][self.dimension_tag] = self.dimensions[qn]
-            print("Truncated qn sector", qn, "to dim=", self.dimensions[qn])
-            print("Largest dim: ", max_dims[qn])
-        """
 
 
                 

@@ -178,3 +178,47 @@ def thermodynamics(ensemble, temperatures, e0=None,
         st.mean(energy), st.error_jackknife(energy), \
         st.mean(specific_heat), st.error_jackknife(specific_heat)
 
+
+def entropy(ensemble, temperatures, e0=None,  
+            alpha_tag="AlphasV", beta_tag="BetasV", 
+            crop=True, check_posdef=True, ncores=None,
+            maxdepth=None):
+    """ Get the entropy for a given set of temperatures and shifts
+    
+    Args:
+        ensemble       : Ensemble class
+        temperatures   : temperatures as np.array
+        k              : moment of eigenvalues
+        e0             : precomputed ground state energy, optional
+        alpha_tag      : string, which tag is chosen for diagonal data
+        beta_tag       : string, which tag is chosen for offdiagonal data
+        crop           : flag whethr tmatrix is cropped on deflation (def: True)
+        check_posdef   : check whethr all weights are positive in exponentiation
+        ncores         : number of parallel processes used for the computation
+    Returns:
+        np.array, np.array: mean / error estimate for energy for 
+                            every temperature and shift
+    """
+    if e0 == None:
+        e0, e0qns = pba.ground_state_energy(ensemble, ncores=ncores, 
+                                            alpha_tag=alpha_tag, beta_tag=beta_tag,
+                                            maxdepth=maxdepth)
+
+
+    Z = moment_sum(ensemble, temperatures, 0, e0,  
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
+    E = moment_sum(ensemble, temperatures, 1, e0,  
+                   alpha_tag, beta_tag, crop, check_posdef, ncores, maxdepth)
+
+    Z_jackknife = st.jackknife(Z)
+    E_jackknife = st.jackknife(E)
+
+    entropy = OrderedDict()
+    for seed in ensemble.seeds:
+        energy_term = E_jackknife[seed] / Z_jackknife[seed] - e0[seed]
+        # divide by temperatures
+        energy_term /= temperatures
+        entropy[seed] = np.log(Z_jackknife[seed]) + energy_term
+                        
+    return st.mean(entropy), st.error_jackknife(entropy)
+

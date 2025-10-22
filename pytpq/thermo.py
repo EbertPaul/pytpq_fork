@@ -169,14 +169,18 @@ def thermodynamics(ensemble, temperatures, e0=None,
         energy[seed] = E_jackknife[seed] / Z_jackknife[seed]
     
     specific_heat = OrderedDict()
+    entropy = OrderedDict()
     betas = 1. / temperatures
     for seed in ensemble.seeds:
         specific_heat[seed] = ( Q_jackknife[seed] / Z_jackknife[seed] - (E_jackknife[seed] / Z_jackknife[seed])**2)
         specific_heat[seed] = betas**2 * specific_heat[seed]
+        entropy[seed] = np.log(Z_jackknife[seed]) + (energy[seed] - e0[seed])/temperatures
 
     return st.mean(Z), st.error(Z), \
         st.mean(energy), st.error_jackknife(energy), \
-        st.mean(specific_heat), st.error_jackknife(specific_heat)
+        st.mean(specific_heat), st.error_jackknife(specific_heat), \
+        st.mean(entropy), st.error_jackknife(entropy)
+        
 
 
 def entropy(ensemble, temperatures, e0=None,  

@@ -9,6 +9,7 @@ from collections import OrderedDict
 import time
 import multiprocessing
 import functools
+from joblib import Parallel, delayed
 
 import pytpq.statistics_for_tpq as st
 import pytpq.linalg as pla
@@ -62,8 +63,11 @@ def moment_sum(ensemble, temperatures, k=0, e0=None,
                                      k=k, e0=e0, alpha_tag=alpha_tag,
                                      beta_tag=beta_tag, crop=crop, 
                                      check_posdef=check_posdef)
-        with multiprocessing.Pool(ncores) as p:
-            results = p.map(sum_func, ensemble.seeds)
+        #with multiprocessing.Pool(ncores) as p:
+        #    results = p.map(sum_func, ensemble.seeds)
+        results = Parallel(n_jobs=ncores, backend="threading")\
+                (map(delayed(_moment_sum_seed), ensemble.seeds))
+            
 
         for seed, summ in results:
             moment_sum[seed] = summ

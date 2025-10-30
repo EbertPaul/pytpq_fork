@@ -164,13 +164,9 @@ def read_data(directory, regex, seed_inds, qn_inds, full_hilbert_space_dim=None,
 
             data_for_seed[seed][qns] = data
     else: # Read files in parallel
+        print("Parallelizing reading over {} cores.".format(ncores))
         read_func = functools.partial(_read_single_file, regex=regex, 
                                       seed_inds=seed_inds, qn_inds=qn_inds)
-
-        # with multiprocessing.Pool(ncores) as p:
-        #     results = p.map(read_func, matched_files)
-
-        print("Parallelizing reading over {} cores.".format(ncores))
         results = Parallel(n_jobs=ncores, backend="threading")\
                   (map(delayed(read_func), matched_files))
 

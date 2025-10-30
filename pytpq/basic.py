@@ -67,6 +67,7 @@ def ground_state_energy(ensemble, alpha_tag="Alphas", beta_tag="Betas", maxdepth
 
     # Parallelization over seeds
     else:
+        print("Parallelizing ground state energy over {} cores.".format(ncores))
         e0_func = functools.partial(_ground_state_energy_seed,
                                     ensemble=ensemble, alpha_tag=alpha_tag,
                                     beta_tag=beta_tag, maxdepth=maxdepth)

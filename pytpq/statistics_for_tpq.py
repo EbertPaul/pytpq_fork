@@ -34,15 +34,16 @@ def jackknife_parallel(data, ncores=None):
           npdata = data_dict_to_npdata(data)
 
           def jackknife_func(idx, npdata):
-               return np.mean(np.delete(npdata, idx, axis=0), axis=0)
+               return idx, np.mean(np.delete(npdata, idx, axis=0), axis=0)
           
           parallel_jackknife_func = functools.partial(jackknife_func, npdata=npdata)
           results = Parallel(n_jobs=ncores, backend="threading")\
                     (map(delayed(parallel_jackknife_func), range(len(data))))
           
           data_resampled = OrderedDict()
-          for idx, (seed, jackknifed_mean) in results:
-               data_resampled[seed] = jackknifed_mean
+          for idx, something in results:
+               print(idx, ": ", something)
+               #data_resampled[seed] = jackknifed_mean
           
           return data_resampled          
 

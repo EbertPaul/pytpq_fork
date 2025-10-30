@@ -62,11 +62,11 @@ def moment_sum(ensemble, temperatures, k=0, e0=None,
                                      temperatures=temperatures, 
                                      k=k, e0=e0, alpha_tag=alpha_tag,
                                      beta_tag=beta_tag, crop=crop, 
-                                     check_posdef=check_posdef)
+                                     check_posdef=check_posdef, maxdepth=maxdepth)
         #with multiprocessing.Pool(ncores) as p:
         #    results = p.map(sum_func, ensemble.seeds)
         results = Parallel(n_jobs=ncores, backend="threading")\
-                (map(delayed(_moment_sum_seed), ensemble.seeds))
+                (map(delayed(sum_func), ensemble.seeds))
             
 
         for seed, summ in results:

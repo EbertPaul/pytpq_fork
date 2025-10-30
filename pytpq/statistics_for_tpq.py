@@ -41,7 +41,7 @@ def jackknife_parallel(data, ncores=None):
                     (map(delayed(parallel_jackknife_func), range(len(data))))
           
           data_resampled = OrderedDict()
-          for idx, (seed, jackknifed_mean) in enumerate(results):
+          for idx, (seed, jackknifed_mean) in results:
                data_resampled[seed] = jackknifed_mean
           
           return data_resampled          

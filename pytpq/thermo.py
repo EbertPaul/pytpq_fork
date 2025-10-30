@@ -6,8 +6,6 @@ Basic routines for an ensemble
 """
 import numpy as np
 from collections import OrderedDict
-import time
-import multiprocessing
 import functools
 from joblib import Parallel, delayed
 
@@ -129,9 +127,9 @@ def thermodynamics(ensemble, temperatures, e0=None,
     Q = moment_sum(ensemble, temperatures, 2, e0,  
                    alpha_tag, beta_tag, crop, check_posdef, maxdepth, ncores=ncores)
 
-    Z_jackknife = st.jackknife(Z)
-    E_jackknife = st.jackknife(E)
-    Q_jackknife = st.jackknife(Q)
+    Z_jackknife = st.jackknife_parallel(Z, ncores=ncores)
+    E_jackknife = st.jackknife_parallel(E, ncores=ncores)
+    Q_jackknife = st.jackknife_parallel(Q, ncores=ncores)
 
     energy = OrderedDict()
     for seed in ensemble.seeds:

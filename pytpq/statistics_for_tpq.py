@@ -5,8 +5,11 @@ Functions to get statistics over random samples
 :author: Alexander Wietek
 """
 import numpy as np
+from pytpq import ensemble
 import scipy as sp
 from collections import OrderedDict
+import functools
+from joblib import Parallel, delayed
 
 def data_dict_to_npdata(data):
     """ convert a dictionary of arrays to a 2d numpy array """
@@ -23,6 +26,26 @@ def jackknife(data):
 
     return data_resampled
 
+def jackknife_parallel(data, ncores=None):
+     if ncores == None:
+         return jackknife(data)
+     else:
+          print("Parallelizing jackknife over {} cores.".format(ncores))
+          npdata = data_dict_to_npdata(data)
+
+          def jackknife_func(idx, npdata):
+               return np.mean(np.delete(npdata, idx, axis=0), axis=0)
+          
+          parallel_jackknife_func = functools.partial(jackknife_func, npdata=npdata)
+          results = Parallel(n_jobs=ncores, backend="threading")\
+                    (map(delayed(parallel_jackknife_func), range(len(data))))
+          
+          data_resampled = OrderedDict()
+          for idx, jackknifed_mean in results:
+               seed = list(data.keys())[idx]
+               data_resampled[seed] = jackknifed_mean
+          
+          return data_resampled          
 
 def mean(data):
     """ Compute the mean of a data dict of different seeds

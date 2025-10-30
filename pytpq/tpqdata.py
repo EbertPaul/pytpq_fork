@@ -170,6 +170,7 @@ def read_data(directory, regex, seed_inds, qn_inds, full_hilbert_space_dim=None,
         # with multiprocessing.Pool(ncores) as p:
         #     results = p.map(read_func, matched_files)
 
+        print("Parallelizing reading over {} cores.".format(ncores))
         results = Parallel(n_jobs=ncores, backend="threading")\
                   (map(delayed(read_func), matched_files))
 

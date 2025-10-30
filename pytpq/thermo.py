@@ -95,7 +95,7 @@ def _moment_sum_seed(seed, ensemble, temperatures, k=0, e0=None,
 def thermodynamics(ensemble, temperatures, e0=None,  
                    alpha_tag="Alphas", beta_tag="Betas", 
                    crop=True, check_posdef=True,
-                   maxdepth=None):
+                   maxdepth=None, ncores=None):
     """ Get the partition / energy / specific heat 
     
     Args:
@@ -116,14 +116,14 @@ def thermodynamics(ensemble, temperatures, e0=None,
     if e0 == None:
         e0, e0qns = pba.ground_state_energy(ensemble, 
                                             alpha_tag=alpha_tag, beta_tag=beta_tag,
-                                            maxdepth=maxdepth)
+                                            maxdepth=maxdepth, ncores=ncores)
 
     Z = moment_sum(ensemble, temperatures, 0, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, maxdepth)
+                   alpha_tag, beta_tag, crop, check_posdef, maxdepth, ncores=ncores)
     E = moment_sum(ensemble, temperatures, 1, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, maxdepth)
+                   alpha_tag, beta_tag, crop, check_posdef, maxdepth, ncores=ncores)
     Q = moment_sum(ensemble, temperatures, 2, e0,  
-                   alpha_tag, beta_tag, crop, check_posdef, maxdepth)
+                   alpha_tag, beta_tag, crop, check_posdef, maxdepth, ncores=ncores)
 
     Z_jackknife = st.jackknife(Z)
     E_jackknife = st.jackknife(E)

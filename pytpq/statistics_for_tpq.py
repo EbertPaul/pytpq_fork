@@ -43,8 +43,6 @@ def jackknife_parallel(data, ncores=None):
           data_resampled = OrderedDict()
           for idx, jackknifed_mean in enumerate(results):
                seed = list(data.keys())[idx]
-               print(type(jackknifed_mean))
-               print(jackknifed_mean)
                data_resampled[seed] = jackknifed_mean
           
           return data_resampled          

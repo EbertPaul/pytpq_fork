@@ -38,19 +38,27 @@ class TPQData:
         self.qns = qns_for_each_seed[self.seeds[0]]
 
         # Consistency checks for quantum numbers
+        faulty_seeds = []
         for seed, qns in qns_for_each_seed.items():
 
             # Check whether quantum numbers are unique for each seed
             qns2 = list(set(qns))
             if len(qns2) != len(qns):
-                raise ValueError("Non-unique quantum numbers found for seed", 
-                                 seed)
+                faulty_seeds.append(seed)
+                print("Non-unique quantum numbers found for seed", seed)
 
             # Check whether quantum numbers are unique across all seeds
             if set(qns) != set(self.qns):
                 print("self.qns = ", self.qns, "but seed=", seed, " has qns = ", qns)
-                raise ValueError("Not all seeds have the same set"
-                                 " of quantum numbers")
+                faulty_seeds.append(seed)
+                print("Seed {} has inconsistent quantum numbers".format(seed))
+                print("self.qns = ", self.qns, "but seed=", seed, " has qns = ", qns)
+
+        # Remove faulty seeds
+        for fs in faulty_seeds:
+            print("Removing seed", fs, "from TPQData")
+            del self.data[fs]
+            self.seeds.remove(fs)
 
         # Check if block dimension is defined for all hdf5 files
         for seed in self.seeds:

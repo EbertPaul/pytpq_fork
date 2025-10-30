@@ -11,6 +11,7 @@ import re
 from collections import OrderedDict
 import h5py
 import functools
+from joblib import Parallel, delayed
 
 
 
@@ -124,7 +125,7 @@ def _read_single_file(fl, regex, seed_inds, qn_inds):
 
 
 
-def read_data(directory, regex, seed_inds, qn_inds, full_hilbert_space_dim=None, verbose=True):
+def read_data(directory, regex, seed_inds, qn_inds, full_hilbert_space_dim=None, verbose=True, ncores=None):
     """ Read data for various seeds and quantities using regular expression
     
     Args:
@@ -154,13 +155,28 @@ def read_data(directory, regex, seed_inds, qn_inds, full_hilbert_space_dim=None,
     print("Number of files matching regex:", len(matched_files))
 
 
-    # Read files in serial
-    for fl in matched_files:
-        seed, qns, data = _read_single_file(fl, regex, seed_inds, qn_inds)
+    if ncores==None:# Read files in serial
+        for fl in matched_files:
+            seed, qns, data = _read_single_file(fl, regex, seed_inds, qn_inds)
 
-        if seed not in data_for_seed.keys():
-            data_for_seed[seed] = OrderedDict()
+            if seed not in data_for_seed.keys():
+                data_for_seed[seed] = OrderedDict()
 
-        data_for_seed[seed][qns] = data
+            data_for_seed[seed][qns] = data
+    else: # Read files in parallel
+        read_func = functools.partial(_read_single_file, regex=regex, 
+                                      seed_inds=seed_inds, qn_inds=qn_inds)
+
+        # with multiprocessing.Pool(ncores) as p:
+        #     results = p.map(read_func, matched_files)
+
+        results = Parallel(n_jobs=ncores, backend="threading")\
+                  (map(delayed(read_func), matched_files))
+
+        for seed, qns, data in results:
+            if seed not in data_for_seed.keys():
+                data_for_seed[seed] = OrderedDict()
+
+            data_for_seed[seed][qns] = data  
 
     return TPQData(data_for_seed, full_hilbert_space_dim=full_hilbert_space_dim)
